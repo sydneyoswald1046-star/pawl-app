@@ -5,8 +5,14 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut as firebaseSignOut,
+  signInWithCredential,
+  GoogleAuthProvider,
+  OAuthProvider,
   type User,
 } from 'firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import { auth } from './firebase';
 import { attachInvoicesListener } from '../data/invoices';
 import { attachClientsListener } from '../data/clients';
@@ -49,11 +55,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    throw new Error('Google sign-in not wired yet — added in Task 21');
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    const result = await GoogleSignin.signIn();
+    if (result.type === 'cancelled') return;
+    const idToken = result.data?.idToken;
+    if (!idToken) throw new Error('Google sign-in returned no idToken');
+    const cred = GoogleAuthProvider.credential(idToken);
+    await signInWithCredential(auth, cred);
   }, []);
 
   const signInWithApple = useCallback(async () => {
-    throw new Error('Apple sign-in not wired yet — added in Task 22');
+    const rawNonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const hashedNonce = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      rawNonce,
+    );
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      nonce: hashedNonce,
+    });
+    if (!credential.identityToken) throw new Error('Apple sign-in returned no identity token');
+    const provider = new OAuthProvider('apple.com');
+    const firebaseCred = provider.credential({
+      idToken: credential.identityToken,
+      rawNonce,
+    });
+    await signInWithCredential(auth, firebaseCred);
   }, []);
 
   const signOut = useCallback(async () => {

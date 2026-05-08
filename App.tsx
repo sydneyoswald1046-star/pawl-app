@@ -6,9 +6,17 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Home, FileText, Users, Settings, Plus } from 'lucide-react-native';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { ThemeProvider, useTheme } from './src/theme';
 import { I18nProvider, useT } from './src/i18n';
 import { AuthProvider, useAuth } from './src/lib/auth';
+import { googleClientIds } from './src/lib/firebase';
+
+GoogleSignin.configure({
+  webClientId: googleClientIds.webClientId,
+  iosClientId: googleClientIds.iosClientId,
+  offlineAccess: false,
+});
 import DashboardScreen from './src/screens/DashboardScreen';
 import InvoicesScreen from './src/screens/InvoicesScreen';
 import ClientsScreen from './src/screens/ClientsScreen';
