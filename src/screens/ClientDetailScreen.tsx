@@ -52,7 +52,7 @@ export default function ClientDetailScreen() {
   const clientInvoices = useMemo(() => {
     if (!client) return [];
     return allInvoices
-      .filter((i) => i.client === client.name)
+      .filter((i) => i.clientId === client.id)
       .slice()
       .sort((a, b) => (a.dueDate < b.dueDate ? 1 : -1)); // newest first
   }, [allInvoices, client]);
@@ -82,9 +82,13 @@ export default function ClientDetailScreen() {
         {
           text: t('common.delete'),
           style: 'destructive',
-          onPress: () => {
-            deleteClient(client.id);
-            nav.goBack();
+          onPress: async () => {
+            try {
+              await deleteClient(client.id);
+              nav.goBack();
+            } catch (err) {
+              Alert.alert(t('common.error'), (err as Error).message);
+            }
           },
         },
       ]
@@ -197,7 +201,7 @@ export default function ClientDetailScreen() {
         {/* New invoice */}
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={() => nav.navigate('NewInvoice', { clientName: client.name })}
+          onPress={() => nav.navigate('NewInvoice', { clientId: client.id })}
           style={{ marginTop: 8 }}
         >
           <LinearGradient
@@ -320,7 +324,7 @@ function WorkGallery({
               allowsMultipleSelection: false,
             });
       if (!result.canceled && result.assets?.[0]) {
-        addGalleryItem(clientId, { uri: result.assets[0].uri });
+        await addGalleryItem(clientId, { uri: result.assets[0].uri });
       }
     } catch (err) {
       Alert.alert(t('gallery.upload_error_title'), t('gallery.upload_error_body'));
@@ -343,9 +347,13 @@ function WorkGallery({
       {
         text: t('gallery.remove'),
         style: 'destructive',
-        onPress: () => {
-          removeGalleryItem(clientId, item.id);
-          setViewerIndex(null);
+        onPress: async () => {
+          try {
+            await removeGalleryItem(clientId, item.id);
+            setViewerIndex(null);
+          } catch (err) {
+            Alert.alert(t('common.error'), (err as Error).message);
+          }
         },
       },
     ]);
