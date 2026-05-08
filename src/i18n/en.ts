@@ -308,6 +308,22 @@ const en = {
   // Reports & Reminders quick action placeholders
   'reports.coming_soon_title': 'Reports',
   'reports.coming_soon_body': 'Earnings reports — coming soon.',
+
+  // Auth
+  'auth.signIn': 'Sign In',
+  'auth.signUp': 'Sign Up',
+  'auth.resetPassword': 'Reset Password',
+  'auth.email': 'Email',
+  'auth.password': 'Password',
+  'auth.continueWithGoogle': 'Continue with Google',
+  'auth.continueWithApple': 'Continue with Apple',
+  'auth.resetEmailSent': 'Password reset email sent',
+  'auth.error.invalidCredential': 'Invalid email or password',
+  'auth.error.emailInUse': 'Email already registered',
+  'auth.error.weakPassword': 'Password too weak (min 6 characters)',
+  'auth.error.userNotFound': 'No account found for this email',
+  'auth.error.network': 'Network error — check connection',
+  'auth.error.generic': 'Something went wrong. Try again.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
