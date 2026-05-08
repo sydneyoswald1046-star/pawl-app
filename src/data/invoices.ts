@@ -9,6 +9,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  deleteField,
   type Unsubscribe,
   type Timestamp,
 } from 'firebase/firestore';
@@ -84,10 +85,20 @@ function requireUid(): string {
   return currentUid;
 }
 
+// Firestore rejects `undefined` field values. Strip them so callers can pass
+// `field: maybe || undefined` without thinking about it.
+function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out as Partial<T>;
+}
+
 export async function addInvoice(input: NewInvoiceInput): Promise<string> {
   const uid = requireUid();
   const ref = await addDoc(collection(db, 'users', uid, 'invoices'), {
-    ...input,
+    ...stripUndefined(input),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     localCreatedAt: Date.now(),
@@ -101,7 +112,7 @@ export async function updateInvoice(
 ): Promise<void> {
   const uid = requireUid();
   await updateDoc(doc(db, 'users', uid, 'invoices', id), {
-    ...patch,
+    ...stripUndefined(patch),
     updatedAt: serverTimestamp(),
   });
 }
@@ -117,7 +128,12 @@ export async function markInvoicePaid(id: string, paidOn?: string): Promise<void
 }
 
 export async function markInvoiceUnpaid(id: string): Promise<void> {
-  await updateInvoice(id, { status: 'pending', paidDate: undefined });
+  const uid = requireUid();
+  await updateDoc(doc(db, 'users', uid, 'invoices', id), {
+    status: 'pending',
+    paidDate: deleteField(),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export function nextInvoiceNumber(): string {

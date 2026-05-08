@@ -82,10 +82,20 @@ function requireUid(): string {
   return currentUid;
 }
 
+// Firestore rejects `undefined` field values. Strip them so callers can pass
+// `field: maybe || undefined` without thinking about it.
+function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out as Partial<T>;
+}
+
 export async function addClient(input: NewClientInput): Promise<string> {
   const uid = requireUid();
   const ref = await addDoc(collection(db, 'users', uid, 'clients'), {
-    ...input,
+    ...stripUndefined(input),
     createdAt: new Date().toISOString().split('T')[0],
     updatedAt: serverTimestamp(),
   });
@@ -98,7 +108,7 @@ export async function updateClient(
 ): Promise<void> {
   const uid = requireUid();
   await updateDoc(doc(db, 'users', uid, 'clients', id), {
-    ...patch,
+    ...stripUndefined(patch),
     updatedAt: serverTimestamp(),
   });
 }
