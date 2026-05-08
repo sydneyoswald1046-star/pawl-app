@@ -8,6 +8,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from './firebase';
+import { attachInvoicesListener } from '../data/invoices';
 
 type AuthContextValue = {
   user: User | null;
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setInitializing(false);
+      attachInvoicesListener(u?.uid ?? null);
     });
     return unsub;
   }, []);

@@ -1,4 +1,18 @@
 import { useSyncExternalStore } from 'react';
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  type Unsubscribe,
+  type Timestamp,
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { getCurrentLocale } from '../i18n';
 import en from '../i18n/en';
 import es from '../i18n/es';
@@ -13,38 +27,32 @@ export type InvoiceLineItem = {
 
 export type Invoice = {
   id: string;
-  number?: string; // e.g. "INV-0012"
-  client: string;
-  service: string; // human summary of items for list views
+  number: string;
+  clientId: string;
+  clientName: string;
+  clientEmail?: string;
+  service: string;
   items?: InvoiceLineItem[];
   notes?: string;
   amount: number;
+  currency: string;
   status: InvoiceStatus;
-  issuedDate?: string; // ISO YYYY-MM-DD
-  dueDate: string; // ISO YYYY-MM-DD
-  paidDate?: string; // ISO YYYY-MM-DD — set only for paid invoices
+  issuedDate?: string;
+  dueDate: string;
+  paidDate?: string;
+  createdAt?: Timestamp | null;
+  updatedAt?: Timestamp | null;
+  localCreatedAt: number;
 };
 
-const SEED: Invoice[] = [
-  // Current — open invoices
-  { id: '1', number: 'INV-0012', client: 'Marcus Williams', service: 'Photography', amount: 850, status: 'paid', issuedDate: '2026-04-01', dueDate: '2026-04-18', paidDate: '2026-04-14' },
-  { id: '2', number: 'INV-0011', client: 'Sarah Chen', service: 'Brand Design', amount: 2400, status: 'pending', issuedDate: '2026-04-15', dueDate: '2026-04-29' },
-  { id: '3', number: 'INV-0010', client: 'Oakwood Barbershop', service: 'Maintenance', amount: 350, status: 'overdue', issuedDate: '2026-04-05', dueDate: '2026-04-17' },
-  { id: '4', number: 'INV-0009', client: 'Lisa Okafor', service: 'DJ Set', amount: 1200, status: 'pending', issuedDate: '2026-04-20', dueDate: '2026-05-04' },
-  { id: '5', number: 'INV-0008', client: 'Tomas Reyes', service: 'Video Editing', amount: 850, status: 'pending', issuedDate: '2026-04-12', dueDate: '2026-04-26' },
-  // Historical — paid invoices for reports
-  { id: 'h1', number: 'INV-0001', client: 'Marcus Williams', service: 'Event Photography', amount: 1600, status: 'paid', issuedDate: '2025-11-06', dueDate: '2025-11-20', paidDate: '2025-11-18' },
-  { id: 'h2', number: 'INV-0002', client: 'Sarah Chen', service: 'Brand Identity', amount: 2200, status: 'paid', issuedDate: '2025-12-01', dueDate: '2025-12-15', paidDate: '2025-12-12' },
-  { id: 'h3', number: 'INV-0003', client: 'Oakwood Barbershop', service: 'Maintenance', amount: 350, status: 'paid', issuedDate: '2025-12-22', dueDate: '2026-01-05', paidDate: '2026-01-04' },
-  { id: 'h4', number: 'INV-0004', client: 'Tomas Reyes', service: 'Intro Video', amount: 900, status: 'paid', issuedDate: '2026-01-27', dueDate: '2026-02-10', paidDate: '2026-02-09' },
-  { id: 'h5', number: 'INV-0005', client: 'Lisa Okafor', service: 'DJ Set', amount: 1400, status: 'paid', issuedDate: '2026-02-11', dueDate: '2026-02-25', paidDate: '2026-02-26' },
-  { id: 'h6', number: 'INV-0006', client: 'Sarah Chen', service: 'Website Redesign', amount: 3200, status: 'paid', issuedDate: '2026-03-04', dueDate: '2026-03-18', paidDate: '2026-03-15' },
-  { id: 'h7', number: 'INV-0007', client: 'Marcus Williams', service: 'Product Photography', amount: 1100, status: 'paid', issuedDate: '2026-03-14', dueDate: '2026-03-28', paidDate: '2026-03-27' },
-];
+export type NewInvoiceInput = Omit<Invoice, 'id' | 'createdAt' | 'updatedAt' | 'localCreatedAt'>;
 
-let invoices: Invoice[] = SEED;
+let invoices: Invoice[] = [];
 const listeners = new Set<() => void>();
+let unsub: Unsubscribe | null = null;
+let currentUid: string | null = null;
 
+const notify = () => listeners.forEach((l) => l());
 const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => {
@@ -53,34 +61,68 @@ const subscribe = (l: () => void) => {
 };
 const getSnapshot = (): Invoice[] => invoices;
 
-export function addInvoice(invoice: Invoice) {
-  invoices = [invoice, ...invoices];
-  listeners.forEach((l) => l());
+export function attachInvoicesListener(uid: string | null) {
+  unsub?.();
+  currentUid = uid;
+  if (!uid) {
+    invoices = [];
+    notify();
+    return;
+  }
+  const q = query(
+    collection(db, 'users', uid, 'invoices'),
+    orderBy('localCreatedAt', 'desc'),
+  );
+  unsub = onSnapshot(q, (snap) => {
+    invoices = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Invoice, 'id'>) }));
+    notify();
+  });
 }
 
-export function updateInvoice(id: string, patch: Partial<Omit<Invoice, 'id'>>) {
-  invoices = invoices.map((i) => (i.id === id ? { ...i, ...patch } : i));
-  listeners.forEach((l) => l());
+function requireUid(): string {
+  if (!currentUid) throw new Error('Cannot mutate invoices: not signed in');
+  return currentUid;
 }
 
-export function deleteInvoice(id: string) {
-  invoices = invoices.filter((i) => i.id !== id);
-  listeners.forEach((l) => l());
+export async function addInvoice(input: NewInvoiceInput): Promise<string> {
+  const uid = requireUid();
+  const ref = await addDoc(collection(db, 'users', uid, 'invoices'), {
+    ...input,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    localCreatedAt: Date.now(),
+  });
+  return ref.id;
 }
 
-export function markInvoicePaid(id: string, paidOn?: string) {
+export async function updateInvoice(
+  id: string,
+  patch: Partial<Omit<Invoice, 'id' | 'createdAt' | 'localCreatedAt'>>,
+): Promise<void> {
+  const uid = requireUid();
+  await updateDoc(doc(db, 'users', uid, 'invoices', id), {
+    ...patch,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteInvoice(id: string): Promise<void> {
+  const uid = requireUid();
+  await deleteDoc(doc(db, 'users', uid, 'invoices', id));
+}
+
+export async function markInvoicePaid(id: string, paidOn?: string): Promise<void> {
   const date = paidOn ?? new Date().toISOString().split('T')[0];
-  updateInvoice(id, { status: 'paid', paidDate: date });
+  await updateInvoice(id, { status: 'paid', paidDate: date });
 }
 
-export function markInvoiceUnpaid(id: string) {
-  updateInvoice(id, { status: 'pending', paidDate: undefined });
+export async function markInvoiceUnpaid(id: string): Promise<void> {
+  await updateInvoice(id, { status: 'pending', paidDate: undefined });
 }
 
 export function nextInvoiceNumber(): string {
   let max = 0;
   for (const inv of invoices) {
-    if (!inv.number) continue;
     const m = inv.number.match(/(\d+)$/);
     if (m) max = Math.max(max, parseInt(m[1], 10));
   }
@@ -209,10 +251,10 @@ function isInPeriod(paidDate: string, period: ReportPeriod, today: Date): boolea
 export function revenueInPeriod(
   list: Invoice[],
   period: ReportPeriod,
-  today: Date = new Date()
+  today: Date = new Date(),
 ) {
   const paid = list.filter(
-    (i) => i.status === 'paid' && i.paidDate && isInPeriod(i.paidDate, period, today)
+    (i) => i.status === 'paid' && i.paidDate && isInPeriod(i.paidDate, period, today),
   );
   return {
     amount: paid.reduce((s, i) => s + i.amount, 0),
@@ -226,7 +268,7 @@ export type MonthRevenue = { key: string; label: string; amount: number };
 export function monthlyRevenue(
   list: Invoice[],
   monthsBack: number = 6,
-  today: Date = new Date()
+  today: Date = new Date(),
 ): MonthRevenue[] {
   const out: MonthRevenue[] = [];
   for (let i = monthsBack - 1; i >= 0; i--) {
@@ -246,13 +288,13 @@ export type ClientRevenue = { name: string; amount: number; count: number };
 export function topClientsByRevenue(
   list: Invoice[],
   n: number = 5,
-  onlyPaid: boolean = true
+  onlyPaid: boolean = true,
 ): ClientRevenue[] {
   const map = new Map<string, { amount: number; count: number }>();
   for (const inv of list) {
     if (onlyPaid && inv.status !== 'paid') continue;
-    const prev = map.get(inv.client) ?? { amount: 0, count: 0 };
-    map.set(inv.client, { amount: prev.amount + inv.amount, count: prev.count + 1 });
+    const prev = map.get(inv.clientName) ?? { amount: 0, count: 0 };
+    map.set(inv.clientName, { amount: prev.amount + inv.amount, count: prev.count + 1 });
   }
   return Array.from(map.entries())
     .map(([name, v]) => ({ name, ...v }))
@@ -263,9 +305,7 @@ export function topClientsByRevenue(
 export function statusBreakdown(list: Invoice[], today: Date = new Date()) {
   const paid = list.filter((i) => i.status === 'paid');
   const overdue = list.filter((i) => isOverdue(i, today));
-  const pending = list.filter(
-    (i) => i.status !== 'paid' && !isOverdue(i, today)
-  );
+  const pending = list.filter((i) => i.status !== 'paid' && !isOverdue(i, today));
   return {
     paid: {
       amount: paid.reduce((s, i) => s + i.amount, 0),
