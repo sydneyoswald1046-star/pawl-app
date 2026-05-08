@@ -25,19 +25,23 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { addInvoice, nextInvoiceNumber } from '../data/invoices';
-import { useClients, addClient } from '../data/clients';
+import { useClients, addClient, type ClientWithStats } from '../data/clients';
+import { useProfile } from '../data/profile';
 import { useT } from '../i18n';
 
 type LineItem = { id: string; description: string; amount: string };
 type DueOption = 7 | 14 | 30;
+type PickedClient = { id: string; name: string; email?: string };
 
 export default function NewInvoiceScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<any>();
   const t = useT();
-  const route = useRoute<RouteProp<{ params?: { clientName?: string } }, 'params'>>();
-  const prefillClient = route.params?.clientName;
+  const route = useRoute<RouteProp<{ params?: { clientId?: string } }, 'params'>>();
+  const prefillClientId = route.params?.clientId;
+  const profile = useProfile();
+  const clients = useClients();
 
   const DUE_OPTIONS: { days: DueOption; label: string }[] = [
     { days: 7, label: t('new_invoice.net_7') },
@@ -45,17 +49,21 @@ export default function NewInvoiceScreen() {
     { days: 30, label: t('new_invoice.net_30') },
   ];
 
-  const [client, setClient] = useState<string | null>(prefillClient ?? null);
+  const [picked, setPicked] = useState<PickedClient | null>(null);
 
   useEffect(() => {
-    if (prefillClient) setClient(prefillClient);
-  }, [prefillClient]);
+    if (!prefillClientId) return;
+    const found = clients.find((cl) => cl.id === prefillClientId);
+    if (found) setPicked({ id: found.id, name: found.name, email: found.email });
+  }, [prefillClientId, clients]);
+
   const [items, setItems] = useState<LineItem[]>([
     { id: cryptoId(), description: '', amount: '' },
   ]);
   const [dueDays, setDueDays] = useState<DueOption>(14);
   const [notes, setNotes] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const total = useMemo(
     () =>
@@ -69,7 +77,7 @@ export default function NewInvoiceScreen() {
   const validItemCount = items.filter(
     (i) => i.description.trim() && parseFloat(i.amount) > 0
   ).length;
-  const canSend = !!client && validItemCount > 0;
+  const canSend = !!picked && validItemCount > 0 && !saving;
 
   const updateItem = (id: string, patch: Partial<LineItem>) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -81,8 +89,9 @@ export default function NewInvoiceScreen() {
     setItems((prev) => (prev.length === 1 ? prev : prev.filter((it) => it.id !== id)));
   };
 
-  const send = () => {
-    if (!canSend) return;
+  const send = async () => {
+    if (!canSend || !picked) return;
+    setSaving(true);
 
     const todayDate = new Date();
     const issuedDate = todayDate.toISOString().split('T')[0];
@@ -95,39 +104,47 @@ export default function NewInvoiceScreen() {
     );
     const service = validItems.map((i) => i.description.trim()).join(', ');
 
-    addInvoice({
-      id: cryptoId(),
-      number: nextInvoiceNumber(),
-      client: client!,
-      service,
-      items: validItems.map((i) => ({
-        id: i.id,
-        description: i.description.trim(),
-        amount: parseFloat(i.amount),
-      })),
-      notes: notes.trim() || undefined,
-      amount: total,
-      status: 'pending',
-      issuedDate,
-      dueDate,
-    });
+    try {
+      await addInvoice({
+        number: nextInvoiceNumber(),
+        clientId: picked.id,
+        clientName: picked.name,
+        clientEmail: picked.email,
+        service,
+        items: validItems.map((i) => ({
+          id: i.id,
+          description: i.description.trim(),
+          amount: parseFloat(i.amount),
+        })),
+        notes: notes.trim() || undefined,
+        amount: total,
+        currency: profile.defaultCurrency,
+        status: 'pending',
+        issuedDate,
+        dueDate,
+      });
 
-    Alert.alert(
-      t('new_invoice.sent_title'),
-      t('new_invoice.sent_body', {
-        client: client!,
-        amount: total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      }),
-      [{ text: t('common.done'), onPress: () => nav.goBack() }]
-    );
+      Alert.alert(
+        t('new_invoice.sent_title'),
+        t('new_invoice.sent_body', {
+          client: picked.name,
+          amount: total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        }),
+        [{ text: t('common.done'), onPress: () => nav.goBack() }]
+      );
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (pickerOpen) {
     return (
       <ClientPicker
-        currentClient={client}
-        onPick={(name) => {
-          setClient(name);
+        currentClientId={picked?.id ?? null}
+        onPick={(c) => {
+          setPicked(c);
           setPickerOpen(false);
         }}
         onClose={() => setPickerOpen(false)}
@@ -174,10 +191,10 @@ export default function NewInvoiceScreen() {
           <Text
             style={[
               styles.fieldText,
-              { color: client ? c.text : c.sub, fontWeight: client ? '600' : '500' },
+              { color: picked ? c.text : c.sub, fontWeight: picked ? '600' : '500' },
             ]}
           >
-            {client ?? t('new_invoice.select_client')}
+            {picked?.name ?? t('new_invoice.select_client')}
           </Text>
           <ChevronRight size={18} color={c.faint} />
         </TouchableOpacity>
@@ -314,9 +331,9 @@ export default function NewInvoiceScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {!canSend && (
+        {!canSend && !saving && (
           <Text style={[styles.hint, { color: c.faint }]}>
-            {!client ? t('new_invoice.need_client') : t('new_invoice.need_item')}
+            {!picked ? t('new_invoice.need_client') : t('new_invoice.need_item')}
           </Text>
         )}
       </ScrollView>
@@ -328,12 +345,12 @@ export default function NewInvoiceScreen() {
 // Inline client picker
 // ─────────────────────────────────────────────────────────────
 function ClientPicker({
-  currentClient,
+  currentClientId,
   onPick,
   onClose,
 }: {
-  currentClient: string | null;
-  onPick: (name: string) => void;
+  currentClientId: string | null;
+  onPick: (client: PickedClient) => void;
   onClose: () => void;
 }) {
   const { c } = useTheme();
@@ -344,6 +361,7 @@ function ClientPicker({
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [savingNew, setSavingNew] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -355,14 +373,23 @@ function ClientPicker({
     );
   }, [clients, query]);
 
-  const submitNew = () => {
+  const submitNew = async () => {
     const name = newName.trim();
-    if (!name) return;
-    addClient({
-      name,
-      email: newEmail.trim() || undefined,
-    });
-    onPick(name);
+    if (!name || savingNew) return;
+    const email = newEmail.trim() || undefined;
+    setSavingNew(true);
+    try {
+      const id = await addClient({ name, email });
+      onPick({ id, name, email });
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    } finally {
+      setSavingNew(false);
+    }
+  };
+
+  const pickExisting = (cl: ClientWithStats) => {
+    onPick({ id: cl.id, name: cl.name, email: cl.email });
   };
 
   return (
@@ -445,8 +472,8 @@ function ClientPicker({
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={submitNew}
-                disabled={!newName.trim()}
-                style={[styles.addClientSave, { backgroundColor: c.accent, opacity: newName.trim() ? 1 : 0.4 }]}
+                disabled={!newName.trim() || savingNew}
+                style={[styles.addClientSave, { backgroundColor: c.accent, opacity: newName.trim() && !savingNew ? 1 : 0.4 }]}
               >
                 <Text style={styles.addClientSaveText}>{t('picker.add_select')}</Text>
               </TouchableOpacity>
@@ -458,11 +485,11 @@ function ClientPicker({
         {filtered.length > 0 ? (
           <View style={[styles.clientList, { backgroundColor: c.surface }]}>
             {filtered.map((cl, i) => {
-              const active = currentClient === cl.name;
+              const active = currentClientId === cl.id;
               return (
                 <TouchableOpacity
-                  key={cl.name}
-                  onPress={() => onPick(cl.name)}
+                  key={cl.id}
+                  onPress={() => pickExisting(cl)}
                   activeOpacity={0.7}
                   style={[
                     styles.clientRow,
