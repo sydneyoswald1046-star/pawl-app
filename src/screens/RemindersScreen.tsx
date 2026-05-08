@@ -43,7 +43,7 @@ export default function RemindersScreen() {
   const sendOne = (inv: Invoice) => {
     setReminded((prev) => new Set(prev).add(inv.id));
     // TODO: hand off to backend / email/SMS service
-    Alert.alert(t('reminders.single_sent_title'), t('reminders.single_sent_body', { client: inv.client }));
+    Alert.alert(t('reminders.single_sent_title'), t('reminders.single_sent_body', { client: inv.clientName }));
   };
 
   const sendAll = () => {
@@ -207,7 +207,7 @@ function ReminderRow({
       style={[styles.row, { backgroundColor: c.surface, opacity: reminded ? 0.55 : 1 }]}
     >
       <View style={{ flex: 1 }}>
-        <Text style={[styles.client, { color: c.text }]}>{invoice.client}</Text>
+        <Text style={[styles.client, { color: c.text }]}>{invoice.clientName}</Text>
         <Text style={[styles.service, { color: c.sub }]}>
           {invoice.service}
           {' · '}
