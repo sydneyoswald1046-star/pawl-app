@@ -54,7 +54,7 @@ export default function InvoicesScreen() {
       .filter((inv) => {
         if (!q) return true;
         return (
-          inv.client.toLowerCase().includes(q) ||
+          inv.clientName.toLowerCase().includes(q) ||
           inv.service.toLowerCase().includes(q) ||
           inv.number?.toLowerCase().includes(q)
         );
@@ -223,7 +223,7 @@ function InvoiceRow({ invoice, onPress }: { invoice: Invoice; onPress: () => voi
     >
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[styles.rowClient, { color: c.text }]} numberOfLines={1}>
-          {invoice.client}
+          {invoice.clientName}
         </Text>
         <Text style={[styles.rowService, { color: c.sub }]} numberOfLines={1}>
           {invoice.service || '—'}
