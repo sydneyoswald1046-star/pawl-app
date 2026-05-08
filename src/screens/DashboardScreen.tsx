@@ -266,7 +266,7 @@ export default function DashboardScreen() {
               style={[styles.invoiceRow, { backgroundColor: c.surface }]}
             >
               <View style={{ flex: 1 }}>
-                <Text style={[styles.invClient, { color: c.text }]}>{inv.client}</Text>
+                <Text style={[styles.invClient, { color: c.text }]}>{inv.clientName}</Text>
                 <Text style={[styles.invService, { color: c.sub }]}>{inv.service} · {formatDateShort(inv.dueDate)}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
