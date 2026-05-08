@@ -131,11 +131,11 @@ const en = {
   'new_invoice.notes': 'NOTES',
   'new_invoice.notes_placeholder': 'Payment instructions, thank-you note…',
   'new_invoice.total': 'TOTAL',
-  'new_invoice.send': 'Send invoice',
+  'new_invoice.send': 'Save invoice',
   'new_invoice.need_client': 'Select a client to continue',
   'new_invoice.need_item': 'Add at least one item with a description and amount',
-  'new_invoice.sent_title': 'Invoice sent',
-  'new_invoice.sent_body': '{client} has been emailed an invoice for ${amount}.',
+  'new_invoice.sent_title': 'Invoice saved',
+  'new_invoice.sent_body': 'Invoice for {client} for ${amount} saved.',
 
   // Client picker
   'picker.title': 'Pick a client',

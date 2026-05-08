@@ -133,11 +133,11 @@ const es: Record<keyof typeof en, string> = {
   'new_invoice.notes': 'NOTAS',
   'new_invoice.notes_placeholder': 'Instrucciones de pago, mensaje de agradecimiento…',
   'new_invoice.total': 'TOTAL',
-  'new_invoice.send': 'Enviar factura',
+  'new_invoice.send': 'Guardar factura',
   'new_invoice.need_client': 'Selecciona un cliente para continuar',
   'new_invoice.need_item': 'Agrega al menos un artículo con descripción y monto',
-  'new_invoice.sent_title': 'Factura enviada',
-  'new_invoice.sent_body': 'Se envió a {client} por correo una factura por ${amount}.',
+  'new_invoice.sent_title': 'Factura guardada',
+  'new_invoice.sent_body': 'Factura para {client} por ${amount} guardada.',
 
   // Client picker
   'picker.title': 'Elige un cliente',
