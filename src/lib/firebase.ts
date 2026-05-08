@@ -10,6 +10,7 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
+  getFirestore,
   type Firestore,
 } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -54,9 +55,16 @@ if (Platform.OS === 'web') {
 }
 export const auth = _auth;
 
-export const db: Firestore = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-});
+// Persistent cache (IndexedDB) only works on web. On React Native the firebase
+// JS SDK falls back to memory cache and emits a warning, so on native we just
+// use getFirestore which defaults to memory cache silently. True offline
+// persistence on RN requires @react-native-firebase/firestore (deferred).
+export const db: Firestore =
+  Platform.OS === 'web'
+    ? initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      })
+    : getFirestore(app);
 
 export const googleClientIds = {
   webClientId: extra.googleWebClientId,
