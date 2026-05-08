@@ -14,12 +14,12 @@ const config: ExpoConfig = {
     backgroundColor: '#ffffff',
   },
   ios: {
-    bundleIdentifier: 'com.payly.app',
+    bundleIdentifier: 'app.payly.botchtech',
     supportsTablet: true,
     usesAppleSignIn: true,
   },
   android: {
-    package: 'com.payly.app',
+    package: 'app.payly.botchtech',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff',
