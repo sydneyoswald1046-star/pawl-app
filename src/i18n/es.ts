@@ -107,6 +107,8 @@ const es: Record<keyof typeof en, string> = {
   'invoice.notes': 'NOTAS',
   'invoice.mark_paid': 'Marcar como pagada',
   'invoice.send_reminder': 'Enviar recordatorio',
+  'invoice.email_to_client': 'Enviar por correo',
+  'invoice.email_no_recipient': 'Este cliente no tiene correo registrado. Edita el cliente y añade un correo primero.',
   'invoice.mark_unpaid': 'Marcar como no pagada',
   'invoice.mark_unpaid_confirm_title': '¿Marcar como no pagada?',
   'invoice.mark_unpaid_confirm_body': 'Volverá a estado pendiente.',
@@ -138,6 +140,7 @@ const es: Record<keyof typeof en, string> = {
   'new_invoice.need_item': 'Agrega al menos un artículo con descripción y monto',
   'new_invoice.sent_title': 'Factura guardada',
   'new_invoice.sent_body': 'Factura para {client} por ${amount} guardada.',
+  'new_invoice.email_unavailable': 'No hay correo configurado en este dispositivo. Añade una cuenta en Ajustes para enviar facturas.',
 
   // Client picker
   'picker.title': 'Elige un cliente',

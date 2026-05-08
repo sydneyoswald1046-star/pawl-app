@@ -25,6 +25,8 @@ import {
   isOverdue,
 } from '../data/invoices';
 import { useClients } from '../data/clients';
+import { useAuth } from '../lib/auth';
+import { emailInvoice } from '../lib/invoiceEmail';
 import { useT, tPlural } from '../i18n';
 
 export default function InvoiceDetailScreen() {
@@ -98,8 +100,26 @@ export default function InvoiceDetailScreen() {
     ]);
   };
 
+  const { user } = useAuth();
+
   const sendReminder = () => {
     Alert.alert(t('invoice.reminder_sent_title'), t('invoice.reminder_sent_body', { client: invoice.clientName }));
+  };
+
+  const emailToClient = async () => {
+    try {
+      const fromName = user?.displayName || user?.email || 'Payly';
+      const result = await emailInvoice(invoice, fromName);
+      if (!result.ok) {
+        if (result.reason === 'no-recipient') {
+          Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
+        } else {
+          Alert.alert(t('common.error'), t('new_invoice.email_unavailable'));
+        }
+      }
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    }
   };
 
   const confirmDelete = () => {
@@ -272,16 +292,14 @@ export default function InvoiceDetailScreen() {
           </TouchableOpacity>
         )}
 
-        {!paid && (
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={sendReminder}
-            style={[styles.secondaryBtn, { backgroundColor: c.surface, marginTop: 10 }]}
-          >
-            <Send size={16} color={c.accent} strokeWidth={2.2} />
-            <Text style={[styles.secondaryBtnText, { color: c.accent }]}>{t('invoice.send_reminder')}</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={emailToClient}
+          style={[styles.secondaryBtn, { backgroundColor: c.surface, marginTop: paid ? 24 : 10 }]}
+        >
+          <Send size={16} color={c.accent} strokeWidth={2.2} />
+          <Text style={[styles.secondaryBtnText, { color: c.accent }]}>{t('invoice.email_to_client')}</Text>
+        </TouchableOpacity>
 
         {paid && (
           <TouchableOpacity

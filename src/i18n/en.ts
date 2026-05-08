@@ -105,6 +105,8 @@ const en = {
   'invoice.notes': 'NOTES',
   'invoice.mark_paid': 'Mark as paid',
   'invoice.send_reminder': 'Send reminder',
+  'invoice.email_to_client': 'Email to client',
+  'invoice.email_no_recipient': 'This client has no email on file. Edit the client and add an email address first.',
   'invoice.mark_unpaid': 'Mark unpaid',
   'invoice.mark_unpaid_confirm_title': 'Mark as unpaid?',
   'invoice.mark_unpaid_confirm_body': 'This will move it back to pending.',
@@ -136,6 +138,7 @@ const en = {
   'new_invoice.need_item': 'Add at least one item with a description and amount',
   'new_invoice.sent_title': 'Invoice saved',
   'new_invoice.sent_body': 'Invoice for {client} for ${amount} saved.',
+  'new_invoice.email_unavailable': 'Email is not configured on this device. Add a mail account in Settings to send invoices.',
 
   // Client picker
   'picker.title': 'Pick a client',

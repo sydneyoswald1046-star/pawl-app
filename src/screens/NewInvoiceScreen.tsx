@@ -24,9 +24,11 @@ import {
   Send,
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
-import { addInvoice, nextInvoiceNumber } from '../data/invoices';
+import { addInvoice, nextInvoiceNumber, type Invoice } from '../data/invoices';
 import { useClients, addClient, type ClientWithStats } from '../data/clients';
 import { useProfile } from '../data/profile';
+import { useAuth } from '../lib/auth';
+import { emailInvoice } from '../lib/invoiceEmail';
 import { useT } from '../i18n';
 
 type LineItem = { id: string; description: string; amount: string };
@@ -42,6 +44,7 @@ export default function NewInvoiceScreen() {
   const prefillClientId = route.params?.clientId;
   const profile = useProfile();
   const clients = useClients();
+  const { user } = useAuth();
 
   const DUE_OPTIONS: { days: DueOption; label: string }[] = [
     { days: 7, label: t('new_invoice.net_7') },
@@ -103,10 +106,11 @@ export default function NewInvoiceScreen() {
       (i) => i.description.trim() && parseFloat(i.amount) > 0
     );
     const service = validItems.map((i) => i.description.trim()).join(', ');
+    const number = nextInvoiceNumber();
 
     try {
-      await addInvoice({
-        number: nextInvoiceNumber(),
+      const id = await addInvoice({
+        number,
         clientId: picked.id,
         clientName: picked.name,
         clientEmail: picked.email,
@@ -124,14 +128,38 @@ export default function NewInvoiceScreen() {
         dueDate,
       });
 
-      Alert.alert(
-        t('new_invoice.sent_title'),
-        t('new_invoice.sent_body', {
-          client: picked.name,
-          amount: total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-        }),
-        [{ text: t('common.done'), onPress: () => nav.goBack() }]
-      );
+      const fromName = user?.displayName || user?.email || 'Payly';
+      const invoiceForEmail: Invoice = {
+        id,
+        number,
+        clientId: picked.id,
+        clientName: picked.name,
+        clientEmail: picked.email,
+        service,
+        items: validItems.map((i) => ({
+          id: i.id,
+          description: i.description.trim(),
+          amount: parseFloat(i.amount),
+        })),
+        notes: notes.trim() || undefined,
+        amount: total,
+        currency: profile.defaultCurrency,
+        status: 'pending',
+        issuedDate,
+        dueDate,
+        localCreatedAt: Date.now(),
+      };
+
+      try {
+        const result = await emailInvoice(invoiceForEmail, fromName);
+        if (!result.ok && result.reason === 'unavailable') {
+          Alert.alert(t('common.error'), t('new_invoice.email_unavailable'));
+        }
+      } catch (err) {
+        Alert.alert(t('common.error'), (err as Error).message);
+      }
+
+      nav.goBack();
     } catch (err) {
       Alert.alert(t('common.error'), (err as Error).message);
     } finally {

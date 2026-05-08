@@ -34,6 +34,7 @@ const config: ExpoConfig = {
     'expo-font',
     'expo-localization',
     'expo-apple-authentication',
+    'expo-mail-composer',
     [
       '@react-native-google-signin/google-signin',
       { iosUrlScheme: process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME ?? '' },
