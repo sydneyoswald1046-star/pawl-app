@@ -10,6 +10,7 @@ import {
 import { auth } from './firebase';
 import { attachInvoicesListener } from '../data/invoices';
 import { attachClientsListener } from '../data/clients';
+import { attachProfileListener } from '../data/profile';
 
 type AuthContextValue = {
   user: User | null;
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setInitializing(false);
       attachInvoicesListener(u?.uid ?? null);
       attachClientsListener(u?.uid ?? null);
+      attachProfileListener(u?.uid ?? null);
     });
     return unsub;
   }, []);
