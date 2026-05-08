@@ -8,6 +8,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -35,9 +36,10 @@ export default function ClientFormScreen() {
   const [address, setAddress] = useState(existing?.address ?? '');
   const [notes, setNotes] = useState(existing?.notes ?? '');
 
-  const canSave = name.trim().length > 0;
+  const [saving, setSaving] = useState(false);
+  const canSave = name.trim().length > 0 && !saving;
 
-  const save = () => {
+  const save = async () => {
     if (!canSave) return;
     const payload = {
       name: name.trim(),
@@ -46,12 +48,19 @@ export default function ClientFormScreen() {
       address: address.trim() || undefined,
       notes: notes.trim() || undefined,
     };
-    if (editing && existing) {
-      updateClient(existing.id, payload);
-    } else {
-      addClient(payload);
+    setSaving(true);
+    try {
+      if (editing && existing) {
+        await updateClient(existing.id, payload);
+      } else {
+        await addClient(payload);
+      }
+      nav.goBack();
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    } finally {
+      setSaving(false);
     }
-    nav.goBack();
   };
 
   return (
