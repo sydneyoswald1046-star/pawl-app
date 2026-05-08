@@ -1,11 +1,25 @@
 import { useMemo, useSyncExternalStore } from 'react';
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  type Unsubscribe,
+  type Timestamp,
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { useInvoices, type Invoice } from './invoices';
 
 export type GalleryItem = {
   id: string;
   uri: string;
   caption?: string;
-  addedAt: string; // ISO YYYY-MM-DD
+  addedAt: string;
 };
 
 export type Client = {
@@ -16,7 +30,8 @@ export type Client = {
   address?: string;
   notes?: string;
   gallery?: GalleryItem[];
-  createdAt: string; // ISO YYYY-MM-DD
+  createdAt: string;
+  updatedAt?: Timestamp | null;
 };
 
 export type ClientWithStats = Client & {
@@ -26,62 +41,12 @@ export type ClientWithStats = Client & {
   lastInvoiceDate?: string;
 };
 
-const SEED: Client[] = [
-  {
-    id: 'c1',
-    name: 'Marcus Williams',
-    email: 'marcus@mwphoto.co',
-    phone: '+1 (415) 555-0142',
-    address: '2350 Mission St\nSan Francisco, CA 94110',
-    createdAt: '2026-02-14',
-    gallery: [
-      { id: 'g-mw-1', uri: 'https://picsum.photos/seed/payly-mw1/600/600', caption: 'Portrait session', addedAt: '2026-02-20' },
-      { id: 'g-mw-2', uri: 'https://picsum.photos/seed/payly-mw2/600/600', caption: 'Product shoot', addedAt: '2026-03-18' },
-    ],
-  },
-  {
-    id: 'c2',
-    name: 'Sarah Chen',
-    email: 'sarah@chenstudio.com',
-    phone: '+1 (212) 555-0198',
-    address: '421 Broadway, Suite 4B\nNew York, NY 10013',
-    createdAt: '2026-03-02',
-    notes: 'Prefers a brief recap after each milestone.',
-  },
-  {
-    id: 'c3',
-    name: 'Oakwood Barbershop',
-    email: 'book@oakwoodcuts.com',
-    phone: '+1 (323) 555-0176',
-    address: '1508 Sunset Blvd\nLos Angeles, CA 90026',
-    createdAt: '2026-01-18',
-    notes: 'Monthly maintenance retainer — invoice on the 1st.',
-    gallery: [
-      { id: 'g-oak-1', uri: 'https://picsum.photos/seed/payly-oak1/600/600', caption: 'Storefront refresh', addedAt: '2026-02-03' },
-      { id: 'g-oak-2', uri: 'https://picsum.photos/seed/payly-oak2/600/600', caption: 'New chairs installed', addedAt: '2026-03-12' },
-      { id: 'g-oak-3', uri: 'https://picsum.photos/seed/payly-oak3/600/600', caption: 'Exterior lighting', addedAt: '2026-04-10' },
-      { id: 'g-oak-4', uri: 'https://picsum.photos/seed/payly-oak4/600/600', caption: 'Back room cleanup', addedAt: '2026-04-18' },
-    ],
-  },
-  {
-    id: 'c4',
-    name: 'Lisa Okafor',
-    email: 'lisa.okafor@gmail.com',
-    phone: '+1 (646) 555-0163',
-    address: 'Brooklyn, NY',
-    createdAt: '2026-03-20',
-  },
-  {
-    id: 'c5',
-    name: 'Tomas Reyes',
-    email: 'tomas@reyesfilms.net',
-    phone: '+1 (512) 555-0134',
-    createdAt: '2026-04-04',
-  },
-];
+export type NewClientInput = Omit<Client, 'id' | 'createdAt' | 'updatedAt'>;
 
-let store: Client[] = SEED;
+let store: Client[] = [];
 const listeners = new Set<() => void>();
+let unsub: Unsubscribe | null = null;
+let currentUid: string | null = null;
 
 function subscribe(l: () => void) {
   listeners.add(l);
@@ -94,52 +59,74 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
-export function addClient(input: Omit<Client, 'id' | 'createdAt'>): Client {
-  const created: Client = {
-    id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    createdAt: new Date().toISOString().split('T')[0],
+export function attachClientsListener(uid: string | null) {
+  unsub?.();
+  currentUid = uid;
+  if (!uid) {
+    store = [];
+    emit();
+    return;
+  }
+  const q = query(
+    collection(db, 'users', uid, 'clients'),
+    orderBy('createdAt', 'desc'),
+  );
+  unsub = onSnapshot(q, (snap) => {
+    store = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Client, 'id'>) }));
+    emit();
+  });
+}
+
+function requireUid(): string {
+  if (!currentUid) throw new Error('Cannot mutate clients: not signed in');
+  return currentUid;
+}
+
+export async function addClient(input: NewClientInput): Promise<string> {
+  const uid = requireUid();
+  const ref = await addDoc(collection(db, 'users', uid, 'clients'), {
     ...input,
-  };
-  store = [created, ...store];
-  emit();
-  return created;
+    createdAt: new Date().toISOString().split('T')[0],
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
 }
 
-export function updateClient(id: string, patch: Partial<Omit<Client, 'id' | 'createdAt'>>) {
-  store = store.map((c) => (c.id === id ? { ...c, ...patch } : c));
-  emit();
+export async function updateClient(
+  id: string,
+  patch: Partial<Omit<Client, 'id' | 'createdAt' | 'updatedAt'>>,
+): Promise<void> {
+  const uid = requireUid();
+  await updateDoc(doc(db, 'users', uid, 'clients', id), {
+    ...patch,
+    updatedAt: serverTimestamp(),
+  });
 }
 
-export function deleteClient(id: string) {
-  store = store.filter((c) => c.id !== id);
-  emit();
+export async function deleteClient(id: string): Promise<void> {
+  const uid = requireUid();
+  await deleteDoc(doc(db, 'users', uid, 'clients', id));
 }
 
-export function addGalleryItem(
+export async function addGalleryItem(
   clientId: string,
-  item: Omit<GalleryItem, 'id' | 'addedAt'>
-): GalleryItem {
+  item: Omit<GalleryItem, 'id' | 'addedAt'>,
+): Promise<GalleryItem> {
   const created: GalleryItem = {
     id: `g_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     addedAt: new Date().toISOString().split('T')[0],
     ...item,
   };
-  store = store.map((c) =>
-    c.id === clientId
-      ? { ...c, gallery: [created, ...(c.gallery ?? [])] }
-      : c
-  );
-  emit();
+  const current = store.find((c) => c.id === clientId);
+  const nextGallery = [created, ...(current?.gallery ?? [])];
+  await updateClient(clientId, { gallery: nextGallery });
   return created;
 }
 
-export function removeGalleryItem(clientId: string, itemId: string) {
-  store = store.map((c) =>
-    c.id === clientId
-      ? { ...c, gallery: (c.gallery ?? []).filter((g) => g.id !== itemId) }
-      : c
-  );
-  emit();
+export async function removeGalleryItem(clientId: string, itemId: string): Promise<void> {
+  const current = store.find((c) => c.id === clientId);
+  const nextGallery = (current?.gallery ?? []).filter((g) => g.id !== itemId);
+  await updateClient(clientId, { gallery: nextGallery });
 }
 
 export function getClientByName(name: string): Client | undefined {
@@ -153,7 +140,7 @@ function useRawClients(): Client[] {
 function enrich(clients: Client[], invoices: Invoice[]): ClientWithStats[] {
   return clients
     .map((cl) => {
-      const my = invoices.filter((i) => i.client === cl.name);
+      const my = invoices.filter((i) => i.clientId === cl.id);
       const totalBilled = my.reduce((s, i) => s + i.amount, 0);
       const outstandingAmount = my
         .filter((i) => i.status !== 'paid')
