@@ -299,6 +299,8 @@ const es: Record<keyof typeof en, string> = {
   'settings.privacy': 'Privacidad y seguridad',
   'settings.help': 'Ayuda y soporte',
   'settings.language': 'Idioma',
+  'settings.default_currency': 'Moneda predeterminada',
+  'settings.signed_in_as': 'Sesión iniciada',
   'settings.language_choose_title': 'Elegir idioma',
   'settings.language_choose_body': 'Elige tu idioma preferido.',
   'settings.sign_out': 'Cerrar sesión',

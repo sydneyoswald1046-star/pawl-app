@@ -329,7 +329,7 @@ function RevenueChart({ data, invoices }: { data: MonthRevenue[]; invoices: Invo
               <View key={inv.id} style={styles.detailRow}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={[styles.detailClient, { color: c.text }]} numberOfLines={1}>
-                    {inv.client}
+                    {inv.clientName}
                   </Text>
                   <Text style={[styles.detailService, { color: c.sub }]} numberOfLines={1}>
                     {inv.service || '—'}

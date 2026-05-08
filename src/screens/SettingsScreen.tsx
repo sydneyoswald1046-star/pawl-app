@@ -1,14 +1,20 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sun, Moon, User, CreditCard, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe } from 'lucide-react-native';
+import { Sun, Moon, User, CreditCard, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme';
 import { useI18n, SUPPORTED_LOCALES, LANGUAGE_NAMES, type Locale } from '../i18n';
+import { useAuth } from '../lib/auth';
+import { useProfile, updateProfile } from '../data/profile';
+
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'NGN', 'ZAR'];
 
 export default function SettingsScreen() {
   const { c, dark, toggle } = useTheme();
   const insets = useSafeAreaInsets();
   const { t, locale, setLocale } = useI18n();
+  const { user, signOut: authSignOut } = useAuth();
+  const profile = useProfile();
 
   const comingSoon = (label: string) =>
     Alert.alert(label, t('settings.coming_soon_body', { label }));
@@ -19,8 +25,13 @@ export default function SettingsScreen() {
       {
         text: t('settings.sign_out'),
         style: 'destructive',
-        onPress: () =>
-          Alert.alert(t('settings.signed_out_title'), t('settings.signed_out_body')),
+        onPress: async () => {
+          try {
+            await authSignOut();
+          } catch (err) {
+            Alert.alert(t('common.error'), (err as Error).message);
+          }
+        },
       },
     ]);
 
@@ -35,6 +46,29 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const chooseCurrency = () => {
+    Alert.alert(
+      t('settings.default_currency'),
+      undefined,
+      [
+        ...CURRENCIES.map((cur) => ({
+          text: `${cur}${cur === profile.defaultCurrency ? '  ✓' : ''}`,
+          onPress: async () => {
+            try {
+              await updateProfile({ defaultCurrency: cur });
+            } catch (err) {
+              Alert.alert(t('common.error'), (err as Error).message);
+            }
+          },
+        })),
+        { text: t('common.cancel'), style: 'cancel' as const },
+      ],
+    );
+  };
+
+  const initial = (user?.email?.[0] ?? 'P').toUpperCase();
+  const displayEmail = user?.email ?? '';
+
   const sections = [
     {
       title: t('settings.section_account'),
@@ -48,6 +82,7 @@ export default function SettingsScreen() {
       title: t('settings.section_preferences'),
       items: [
         { icon: Globe, label: t('settings.language'), color: c.accent, trailing: LANGUAGE_NAMES[locale], onPress: chooseLanguage },
+        { icon: DollarSign, label: t('settings.default_currency'), color: c.green, trailing: profile.defaultCurrency, onPress: chooseCurrency },
         { icon: Shield, label: t('settings.privacy'), color: c.sub, onPress: () => comingSoon(t('settings.privacy')) },
         { icon: CircleHelp, label: t('settings.help'), color: c.sub, onPress: () => comingSoon(t('settings.help')) },
       ],
@@ -70,14 +105,17 @@ export default function SettingsScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.profileAvatar}
           >
-            <Text style={styles.profileInitial}>O</Text>
+            <Text style={styles.profileInitial}>{initial}</Text>
           </LinearGradient>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.profileName, { color: c.text }]}>Ozzy</Text>
-            <Text style={[styles.profileEmail, { color: c.sub }]}>ozzy@payly.app</Text>
-          </View>
-          <View style={[styles.proBadge, { backgroundColor: c.accentSoft }]}>
-            <Text style={[styles.proText, { color: c.accent }]}>{t('settings.pro')}</Text>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.profileName, { color: c.text }]} numberOfLines={1}>
+              {displayEmail || t('settings.profile')}
+            </Text>
+            {displayEmail && (
+              <Text style={[styles.profileEmail, { color: c.sub }]} numberOfLines={1}>
+                {t('settings.signed_in_as')}
+              </Text>
+            )}
           </View>
         </View>
 

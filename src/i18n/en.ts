@@ -297,6 +297,8 @@ const en = {
   'settings.privacy': 'Privacy & Security',
   'settings.help': 'Help & Support',
   'settings.language': 'Language',
+  'settings.default_currency': 'Default currency',
+  'settings.signed_in_as': 'Signed in',
   'settings.language_choose_title': 'Choose language',
   'settings.language_choose_body': 'Pick your preferred language.',
   'settings.sign_out': 'Sign Out',
