@@ -310,6 +310,22 @@ const es: Record<keyof typeof en, string> = {
   // Reports & Reminders placeholders
   'reports.coming_soon_title': 'Reportes',
   'reports.coming_soon_body': 'Reportes de ingresos — próximamente.',
+
+  // Auth (Spanish translations coming in Task 20)
+  'auth.signIn': 'Sign In',
+  'auth.signUp': 'Sign Up',
+  'auth.resetPassword': 'Reset Password',
+  'auth.email': 'Email',
+  'auth.password': 'Password',
+  'auth.continueWithGoogle': 'Continue with Google',
+  'auth.continueWithApple': 'Continue with Apple',
+  'auth.resetEmailSent': 'Password reset email sent',
+  'auth.error.invalidCredential': 'Invalid email or password',
+  'auth.error.emailInUse': 'Email already registered',
+  'auth.error.weakPassword': 'Password too weak (min 6 characters)',
+  'auth.error.userNotFound': 'No account found for this email',
+  'auth.error.network': 'Network error — check connection',
+  'auth.error.generic': 'Something went wrong. Try again.',
 };
 
 export default es;
