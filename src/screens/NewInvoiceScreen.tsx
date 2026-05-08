@@ -373,14 +373,17 @@ function ClientPicker({
     );
   }, [clients, query]);
 
+  const newNameTrimmed = newName.trim();
+  const newEmailTrimmed = newEmail.trim();
+  const newEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmailTrimmed);
+  const canSubmitNew = !!newNameTrimmed && newEmailValid && !savingNew;
+
   const submitNew = async () => {
-    const name = newName.trim();
-    if (!name || savingNew) return;
-    const email = newEmail.trim() || undefined;
+    if (!canSubmitNew) return;
     setSavingNew(true);
     try {
-      const id = await addClient({ name, email });
-      onPick({ id, name, email });
+      const id = await addClient({ name: newNameTrimmed, email: newEmailTrimmed });
+      onPick({ id, name: newNameTrimmed, email: newEmailTrimmed });
     } catch (err) {
       Alert.alert(t('common.error'), (err as Error).message);
     } finally {
@@ -472,8 +475,8 @@ function ClientPicker({
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={submitNew}
-                disabled={!newName.trim() || savingNew}
-                style={[styles.addClientSave, { backgroundColor: c.accent, opacity: newName.trim() && !savingNew ? 1 : 0.4 }]}
+                disabled={!canSubmitNew}
+                style={[styles.addClientSave, { backgroundColor: c.accent, opacity: canSubmitNew ? 1 : 0.4 }]}
               >
                 <Text style={styles.addClientSaveText}>{t('picker.add_select')}</Text>
               </TouchableOpacity>

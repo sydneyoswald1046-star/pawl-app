@@ -218,6 +218,8 @@ const es: Record<keyof typeof en, string> = {
   'client_form.save': 'Guardar cliente',
   'client_form.save_changes': 'Guardar cambios',
   'client_form.name_required': 'El nombre es obligatorio.',
+  'client_form.email_required': 'El correo electrónico es obligatorio.',
+  'client_form.email_invalid': 'Introduce un correo electrónico válido.',
 
   // Reports
   'reports.title': 'Reportes',

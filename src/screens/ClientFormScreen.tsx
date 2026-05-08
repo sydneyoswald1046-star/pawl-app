@@ -37,13 +37,15 @@ export default function ClientFormScreen() {
   const [notes, setNotes] = useState(existing?.notes ?? '');
 
   const [saving, setSaving] = useState(false);
-  const canSave = name.trim().length > 0 && !saving;
+  const emailTrimmed = email.trim();
+  const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed);
+  const canSave = name.trim().length > 0 && emailLooksValid && !saving;
 
   const save = async () => {
     if (!canSave) return;
     const payload = {
       name: name.trim(),
-      email: email.trim() || undefined,
+      email: emailTrimmed,
       phone: phone.trim() || undefined,
       address: address.trim() || undefined,
       notes: notes.trim() || undefined,
@@ -106,7 +108,7 @@ export default function ClientFormScreen() {
           />
         </Field>
 
-        <Field label={t('client_form.email')}>
+        <Field label={t('client_form.email')} required>
           <TextInput
             value={email}
             onChangeText={setEmail}
@@ -171,8 +173,14 @@ export default function ClientFormScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {!canSave && (
-          <Text style={[styles.hint, { color: c.faint }]}>{t('client_form.name_required')}</Text>
+        {!canSave && !saving && (
+          <Text style={[styles.hint, { color: c.faint }]}>
+            {!name.trim()
+              ? t('client_form.name_required')
+              : !emailTrimmed
+                ? t('client_form.email_required')
+                : t('client_form.email_invalid')}
+          </Text>
         )}
       </ScrollView>
     </KeyboardAvoidingView>

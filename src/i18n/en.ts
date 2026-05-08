@@ -216,6 +216,8 @@ const en = {
   'client_form.save': 'Save client',
   'client_form.save_changes': 'Save changes',
   'client_form.name_required': 'Name is required to save.',
+  'client_form.email_required': 'Email is required to save.',
+  'client_form.email_invalid': 'Enter a valid email address.',
 
   // Reports
   'reports.title': 'Reports',
