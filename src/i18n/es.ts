@@ -3,6 +3,8 @@ import type en from './en';
 const es: Record<keyof typeof en, string> = {
   // Common
   'common.cancel': 'Cancelar',
+  'common.error': 'Error',
+  'new_invoice.pick_client_first': 'Elige un cliente primero',
   'common.save': 'Guardar',
   'common.delete': 'Eliminar',
   'common.done': 'Listo',

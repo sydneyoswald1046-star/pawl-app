@@ -67,25 +67,39 @@ export default function InvoiceDetailScreen() {
       : t('status.paid')
     : formatDueStatus(invoice, today);
 
-  const clientRecord = clients.find((cl) => cl.name === invoice.client);
+  const clientRecord = clients.find((cl) => cl.id === invoice.clientId);
   const lineItems =
     invoice.items && invoice.items.length > 0
       ? invoice.items
       : [{ id: 'single', description: invoice.service || '—', amount: invoice.amount }];
 
-  const markPaid = () => {
-    markInvoicePaid(invoice.id);
+  const markPaid = async () => {
+    try {
+      await markInvoicePaid(invoice.id);
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    }
   };
 
   const markUnpaid = () => {
     Alert.alert(t('invoice.mark_unpaid_confirm_title'), t('invoice.mark_unpaid_confirm_body'), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('invoice.mark_unpaid'), style: 'destructive', onPress: () => markInvoiceUnpaid(invoice.id) },
+      {
+        text: t('invoice.mark_unpaid'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await markInvoiceUnpaid(invoice.id);
+          } catch (err) {
+            Alert.alert(t('common.error'), (err as Error).message);
+          }
+        },
+      },
     ]);
   };
 
   const sendReminder = () => {
-    Alert.alert(t('invoice.reminder_sent_title'), t('invoice.reminder_sent_body', { client: invoice.client }));
+    Alert.alert(t('invoice.reminder_sent_title'), t('invoice.reminder_sent_body', { client: invoice.clientName }));
   };
 
   const confirmDelete = () => {
@@ -94,16 +108,20 @@ export default function InvoiceDetailScreen() {
       t('invoice.delete_confirm_body', {
         prefix: invoice.number ? `${invoice.number} · ` : '',
         amount: invoice.amount.toLocaleString(),
-        client: invoice.client,
+        client: invoice.clientName,
       }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('common.delete'),
           style: 'destructive',
-          onPress: () => {
-            deleteInvoice(invoice.id);
-            nav.goBack();
+          onPress: async () => {
+            try {
+              await deleteInvoice(invoice.id);
+              nav.goBack();
+            } catch (err) {
+              Alert.alert(t('common.error'), (err as Error).message);
+            }
           },
         },
       ]
@@ -160,7 +178,7 @@ export default function InvoiceDetailScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={[styles.clientLabel, { color: c.sub }]}>{t('invoice.billed_to')}</Text>
               <Text style={[styles.clientName, { color: c.text }]} numberOfLines={1}>
-                {invoice.client}
+                {invoice.clientName}
               </Text>
               {clientRecord.email && (
                 <Text style={[styles.clientEmail, { color: c.sub }]} numberOfLines={1}>
@@ -175,7 +193,7 @@ export default function InvoiceDetailScreen() {
           <View style={[styles.clientCard, { backgroundColor: c.surface }]}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.clientLabel, { color: c.sub }]}>{t('invoice.billed_to')}</Text>
-              <Text style={[styles.clientName, { color: c.text }]}>{invoice.client}</Text>
+              <Text style={[styles.clientName, { color: c.text }]}>{invoice.clientName}</Text>
             </View>
           </View>
         )}

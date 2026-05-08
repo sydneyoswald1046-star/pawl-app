@@ -1,6 +1,8 @@
 const en = {
   // Common
   'common.cancel': 'Cancel',
+  'common.error': 'Error',
+  'new_invoice.pick_client_first': 'Pick a client first',
   'common.save': 'Save',
   'common.delete': 'Delete',
   'common.done': 'Done',
