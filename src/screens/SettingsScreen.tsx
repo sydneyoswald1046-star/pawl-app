@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sun, Moon, User, CreditCard, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign } from 'lucide-react-native';
+import { Sun, Moon, CreditCard, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme';
 import { useI18n, SUPPORTED_LOCALES, LANGUAGE_NAMES, type Locale } from '../i18n';
@@ -46,6 +46,29 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const editBusinessName = () => {
+    Alert.prompt(
+      t('settings.business_name'),
+      t('settings.business_name_prompt'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.save'),
+          onPress: async (value?: string) => {
+            const trimmed = (value ?? '').trim();
+            try {
+              await updateProfile({ businessName: trimmed || undefined });
+            } catch (err) {
+              Alert.alert(t('common.error'), (err as Error).message);
+            }
+          },
+        },
+      ],
+      'plain-text',
+      profile.businessName ?? '',
+    );
+  };
+
   const chooseCurrency = () => {
     Alert.alert(
       t('settings.default_currency'),
@@ -73,7 +96,7 @@ export default function SettingsScreen() {
     {
       title: t('settings.section_account'),
       items: [
-        { icon: User, label: t('settings.profile'), color: c.accent, onPress: () => comingSoon(t('settings.profile')) },
+        { icon: Briefcase, label: t('settings.business_name'), color: c.accent, trailing: profile.businessName || t('settings.business_name_unset'), onPress: editBusinessName },
         { icon: CreditCard, label: t('settings.payment_methods'), color: c.green, onPress: () => comingSoon(t('settings.payment_methods')) },
         { icon: Bell, label: t('settings.notifications'), color: c.amber, onPress: () => comingSoon(t('settings.notifications')) },
       ],

@@ -25,6 +25,7 @@ import {
   isOverdue,
 } from '../data/invoices';
 import { useClients } from '../data/clients';
+import { useProfile } from '../data/profile';
 import { useAuth } from '../lib/auth';
 import { emailInvoice } from '../lib/invoiceEmail';
 import { useT, tPlural } from '../i18n';
@@ -101,6 +102,7 @@ export default function InvoiceDetailScreen() {
   };
 
   const { user } = useAuth();
+  const profile = useProfile();
 
   const sendReminder = () => {
     Alert.alert(t('invoice.reminder_sent_title'), t('invoice.reminder_sent_body', { client: invoice.clientName }));
@@ -108,7 +110,7 @@ export default function InvoiceDetailScreen() {
 
   const emailToClient = async () => {
     try {
-      const fromName = user?.displayName || user?.email || 'Payly';
+      const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
       const result = await emailInvoice(invoice, fromName);
       if (!result.ok) {
         if (result.reason === 'no-recipient') {

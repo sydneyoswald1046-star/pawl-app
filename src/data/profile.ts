@@ -4,6 +4,7 @@ import {
   onSnapshot,
   setDoc,
   serverTimestamp,
+  deleteField,
   type Unsubscribe,
   type Timestamp,
 } from 'firebase/firestore';
@@ -11,6 +12,7 @@ import { db } from '../lib/firebase';
 
 export type UserProfile = {
   defaultCurrency: string;
+  businessName?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
@@ -58,9 +60,11 @@ export function attachProfileListener(uid: string | null) {
 
 export async function updateProfile(patch: Partial<UserProfile>): Promise<void> {
   if (!currentUid) throw new Error('Cannot update profile: not signed in');
-  await setDoc(
-    doc(db, 'users', currentUid),
-    { ...patch, updatedAt: serverTimestamp() },
-    { merge: true },
-  );
+  // Translate explicit undefined into a Firestore field deletion so callers can
+  // clear optional fields by passing { foo: undefined }.
+  const payload: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  for (const [k, v] of Object.entries(patch)) {
+    payload[k] = v === undefined ? deleteField() : v;
+  }
+  await setDoc(doc(db, 'users', currentUid), payload, { merge: true });
 }

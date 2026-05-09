@@ -128,7 +128,7 @@ export default function NewInvoiceScreen() {
         dueDate,
       });
 
-      const fromName = user?.displayName || user?.email || 'Payly';
+      const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
       const invoiceForEmail: Invoice = {
         id,
         number,
