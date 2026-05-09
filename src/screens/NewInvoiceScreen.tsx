@@ -23,6 +23,8 @@ import {
   Check,
   Send,
 } from 'lucide-react-native';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { useTheme } from '../theme';
 import { addInvoice, nextInvoiceNumber, type Invoice } from '../data/invoices';
 import { useClients, addClient, type ClientWithStats } from '../data/clients';
@@ -129,6 +131,11 @@ export default function NewInvoiceScreen() {
       });
 
       const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
+      // Wait briefly for the Cloud Function to attach a payment link before
+      // we open the mail composer. Times out gracefully if the function is
+      // slow or fails — email goes out without the link in that case.
+      const paymentLinkUrl = user?.uid ? await waitForPaymentLink(user.uid, id, 10000) : undefined;
+
       const invoiceForEmail: Invoice = {
         id,
         number,
@@ -148,6 +155,7 @@ export default function NewInvoiceScreen() {
         issuedDate,
         dueDate,
         localCreatedAt: Date.now(),
+        paymentLinkUrl,
       };
 
       const sendViaMail = async () => {
@@ -585,6 +593,20 @@ function SectionLabel({ children, color }: { children: string; color: string }) 
 
 function cryptoId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+async function waitForPaymentLink(uid: string, invoiceId: string, timeoutMs: number): Promise<string | undefined> {
+  const ref = doc(db, 'users', uid, 'invoices', invoiceId);
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const snap = await getDoc(ref);
+    const data = snap.data();
+    const url = data?.paymentLinkUrl as string | undefined;
+    if (url) return url;
+    if (data?.paymentLinkError) return undefined; // bail early on Stripe error
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  return undefined;
 }
 
 const styles = StyleSheet.create({
