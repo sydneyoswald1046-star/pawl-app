@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
+  ExternalLink,
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import {
@@ -274,6 +275,36 @@ export default function InvoiceDetailScreen() {
           </View>
         )}
 
+        {/* Payment link */}
+        {!paid && invoice.paymentLinkUrl && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => Linking.openURL(invoice.paymentLinkUrl!)}
+            style={[styles.payLinkCard, { backgroundColor: c.accent }]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.payLinkTitle}>{t('invoice.pay_link_title')}</Text>
+              <Text style={styles.payLinkSub} numberOfLines={1}>
+                {invoice.paymentLinkUrl}
+              </Text>
+            </View>
+            <ExternalLink size={18} color="#fff" strokeWidth={2.2} />
+          </TouchableOpacity>
+        )}
+        {!paid && !invoice.paymentLinkUrl && !invoice.paymentLinkError && (
+          <View style={[styles.payLinkCard, { backgroundColor: c.surface, borderWidth: 1, borderColor: c.faint + '40', borderStyle: 'dashed' }]}>
+            <Text style={[styles.payLinkSub, { color: c.sub }]}>{t('invoice.pay_link_pending')}</Text>
+          </View>
+        )}
+        {!paid && invoice.paymentLinkError && (
+          <View style={[styles.payLinkCard, { backgroundColor: c.redSoft }]}>
+            <Text style={[styles.payLinkTitle, { color: c.red }]}>{t('invoice.pay_link_error')}</Text>
+            <Text style={[styles.payLinkSub, { color: c.red }]} numberOfLines={2}>
+              {invoice.paymentLinkError}
+            </Text>
+          </View>
+        )}
+
         {/* Items */}
         <Text style={[styles.sectionLabel, { color: c.sub }]}>{t('invoice.items')}</Text>
         <View style={[styles.itemsCard, { backgroundColor: c.surface }]}>
@@ -461,6 +492,17 @@ const styles = StyleSheet.create({
   clientLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
   clientName: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
   clientEmail: { fontSize: 12, marginTop: 2 },
+
+  payLinkCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 18,
+  },
+  payLinkTitle: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  payLinkSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
 
   sectionLabel: {
     fontSize: 11,

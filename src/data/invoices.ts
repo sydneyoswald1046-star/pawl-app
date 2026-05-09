@@ -44,6 +44,11 @@ export type Invoice = {
   createdAt?: Timestamp | null;
   updatedAt?: Timestamp | null;
   localCreatedAt: number;
+  paymentLinkUrl?: string;
+  paymentLinkError?: string;
+  stripeProductId?: string;
+  stripePriceId?: string;
+  stripePaymentLinkId?: string;
 };
 
 export type NewInvoiceInput = Omit<Invoice, 'id' | 'createdAt' | 'updatedAt' | 'localCreatedAt'>;

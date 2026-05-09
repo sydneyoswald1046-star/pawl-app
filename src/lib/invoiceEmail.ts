@@ -106,6 +106,10 @@ export function buildInvoiceHtml(invoice: Invoice, fromName: string): string {
       : ''}
   </div>
 
+  ${invoice.paymentLinkUrl
+    ? `<div style="margin-top:24px;padding:18px;background:#7c3aed;border-radius:12px;text-align:center;"><a href="${escapeHtml(invoice.paymentLinkUrl)}" style="color:#fff;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:-0.2px;">Pay this invoice online →</a><div style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:6px;">Secure checkout via Stripe</div></div>`
+    : ''}
+
   ${invoice.notes ? `<div class="notes"><div class="label" style="margin-bottom:6px;">Notes</div>${escapeHtml(invoice.notes)}</div>` : ''}
 </body>
 </html>`;
@@ -139,6 +143,10 @@ function dueStatus(invoice: Invoice): string {
   return `due in ${days} days`;
 }
 
+function payLine(invoice: Invoice): string {
+  return invoice.paymentLinkUrl ? `Pay online: ${invoice.paymentLinkUrl}\n` : '';
+}
+
 function buildEmailFields(
   invoice: Invoice,
   fromName: string,
@@ -153,8 +161,9 @@ function buildEmailFields(
         `Just a friendly reminder that invoice ${invoice.number} for ${total} is ${dueStatus(invoice)}. ` +
         `A copy of the invoice is attached for your reference.\n\n` +
         `Total: ${total}\n` +
-        `Due: ${formatDateLong(invoice.dueDate)}\n\n` +
-        `Thanks,\n${fromName}\n`,
+        `Due: ${formatDateLong(invoice.dueDate)}\n` +
+        payLine(invoice) +
+        `\nThanks,\n${fromName}\n`,
     };
   }
   return {
@@ -163,8 +172,9 @@ function buildEmailFields(
       `Hi ${invoice.clientName},\n\n` +
       `Please find your invoice (${invoice.number}) attached.\n\n` +
       `Total: ${total}\n` +
-      `Due: ${formatDateLong(invoice.dueDate)}\n\n` +
-      `Thanks,\n${fromName}\n`,
+      `Due: ${formatDateLong(invoice.dueDate)}\n` +
+      payLine(invoice) +
+      `\nThanks,\n${fromName}\n`,
   };
 }
 
