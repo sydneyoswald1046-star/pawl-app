@@ -299,6 +299,95 @@ export function monthlyRevenue(
   return out;
 }
 
+export type Granularity = 'day' | 'month';
+export type SeriesPoint = { key: string; label: string; amount: number };
+
+function bucketKey(date: Date, gran: Granularity): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return gran === 'day' ? `${y}-${m}-${d}` : `${y}-${m}`;
+}
+
+function bucketLabel(date: Date, gran: Granularity): string {
+  return date.toLocaleDateString(localeTag(), gran === 'day' ? { month: 'short', day: 'numeric' } : { month: 'short' });
+}
+
+function bucketEnd(date: Date, gran: Granularity): Date {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  if (gran === 'month') d.setMonth(d.getMonth() + 1, 0);
+  return d;
+}
+
+function bucketDates(today: Date, gran: Granularity, count: number): Date[] {
+  const out: Date[] = [];
+  const t = new Date(today);
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(t);
+    if (gran === 'day') d.setDate(d.getDate() - i);
+    else d.setMonth(d.getMonth() - i, 1);
+    out.push(d);
+  }
+  return out;
+}
+
+export function earningsSeries(
+  list: Invoice[],
+  gran: Granularity,
+  count: number,
+  today: Date = new Date(),
+): SeriesPoint[] {
+  return bucketDates(today, gran, count).map((d) => {
+    const key = bucketKey(d, gran);
+    const amount = list
+      .filter((inv) => inv.status === 'paid' && inv.paidDate?.startsWith(key))
+      .reduce((s, inv) => s + inv.amount, 0);
+    return { key, label: bucketLabel(d, gran), amount };
+  });
+}
+
+export function outstandingSeriesAt(
+  list: Invoice[],
+  gran: Granularity,
+  count: number,
+  today: Date = new Date(),
+): SeriesPoint[] {
+  return bucketDates(today, gran, count).map((d) => {
+    const endKey = bucketKey(bucketEnd(d, gran), 'day');
+    const amount = list
+      .filter((inv) => {
+        if (!inv.issuedDate) return false;
+        if (inv.issuedDate > endKey) return false; // not yet issued
+        if (inv.status !== 'paid') return true;
+        return inv.paidDate ? inv.paidDate > endKey : true; // paid after this bucket
+      })
+      .reduce((s, inv) => s + inv.amount, 0);
+    return { key: bucketKey(d, gran), label: bucketLabel(d, gran), amount };
+  });
+}
+
+export function overdueSeriesAt(
+  list: Invoice[],
+  gran: Granularity,
+  count: number,
+  today: Date = new Date(),
+): SeriesPoint[] {
+  return bucketDates(today, gran, count).map((d) => {
+    const endKey = bucketKey(bucketEnd(d, gran), 'day');
+    const amount = list
+      .filter((inv) => {
+        if (!inv.issuedDate) return false;
+        if (inv.issuedDate > endKey) return false;
+        if (inv.dueDate >= endKey) return false; // not overdue yet
+        if (inv.status === 'paid' && inv.paidDate && inv.paidDate <= endKey) return false;
+        return true;
+      })
+      .reduce((s, inv) => s + inv.amount, 0);
+    return { key: bucketKey(d, gran), label: bucketLabel(d, gran), amount };
+  });
+}
+
 export type ClientRevenue = { name: string; amount: number; count: number };
 
 export function topClientsByRevenue(
