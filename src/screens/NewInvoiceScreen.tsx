@@ -28,7 +28,7 @@ import { addInvoice, nextInvoiceNumber, type Invoice } from '../data/invoices';
 import { useClients, addClient, type ClientWithStats } from '../data/clients';
 import { useProfile } from '../data/profile';
 import { useAuth } from '../lib/auth';
-import { emailInvoice } from '../lib/invoiceEmail';
+import { emailInvoice, shareInvoicePdf } from '../lib/invoiceEmail';
 import { useT } from '../i18n';
 
 type LineItem = { id: string; description: string; amount: string };
@@ -150,16 +150,34 @@ export default function NewInvoiceScreen() {
         localCreatedAt: Date.now(),
       };
 
-      try {
-        const result = await emailInvoice(invoiceForEmail, fromName);
-        if (!result.ok && result.reason === 'unavailable') {
-          Alert.alert(t('common.error'), t('new_invoice.email_unavailable'));
+      const sendViaMail = async () => {
+        try {
+          const result = await emailInvoice(invoiceForEmail, fromName);
+          if (!result.ok && result.reason === 'unavailable') {
+            Alert.alert(t('common.error'), t('new_invoice.email_unavailable'));
+          }
+        } catch (err) {
+          Alert.alert(t('common.error'), (err as Error).message);
+        } finally {
+          nav.goBack();
         }
-      } catch (err) {
-        Alert.alert(t('common.error'), (err as Error).message);
-      }
+      };
 
-      nav.goBack();
+      const shareToOtherApp = async () => {
+        try {
+          await shareInvoicePdf(invoiceForEmail, fromName);
+        } catch (err) {
+          Alert.alert(t('common.error'), (err as Error).message);
+        } finally {
+          nav.goBack();
+        }
+      };
+
+      Alert.alert(t('invoice.email_choose_title'), t('invoice.email_choose_body'), [
+        { text: t('invoice.email_choose_mail'), onPress: sendViaMail },
+        { text: t('invoice.email_choose_share'), onPress: shareToOtherApp },
+        { text: t('invoice.email_choose_skip'), style: 'cancel', onPress: () => nav.goBack() },
+      ]);
     } catch (err) {
       Alert.alert(t('common.error'), (err as Error).message);
     } finally {

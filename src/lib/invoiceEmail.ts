@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as MailComposer from 'expo-mail-composer';
+import { Share } from 'react-native';
 import type { Invoice } from '../data/invoices';
 
 function escapeHtml(s: string): string {
@@ -120,6 +121,23 @@ export type EmailInvoiceResult =
   | { ok: true; status: MailComposer.MailComposerStatus }
   | { ok: false; reason: 'unavailable' | 'no-recipient' };
 
+export type ShareInvoiceResult =
+  | { ok: true; action: string | undefined }
+  | { ok: false; reason: 'no-recipient' };
+
+function buildEmailFields(invoice: Invoice, fromName: string): { subject: string; body: string } {
+  const total = formatMoney(invoice.amount, invoice.currency);
+  return {
+    subject: `Invoice ${invoice.number} — ${total}`,
+    body:
+      `Hi ${invoice.clientName},\n\n` +
+      `Please find your invoice (${invoice.number}) attached.\n\n` +
+      `Total: ${total}\n` +
+      `Due: ${formatDateLong(invoice.dueDate)}\n\n` +
+      `Thanks,\n${fromName}\n`,
+  };
+}
+
 export async function emailInvoice(
   invoice: Invoice,
   fromName: string,
@@ -129,14 +147,7 @@ export async function emailInvoice(
   if (!available) return { ok: false, reason: 'unavailable' };
 
   const pdfUri = await generateInvoicePdf(invoice, fromName);
-  const total = formatMoney(invoice.amount, invoice.currency);
-  const subject = `Invoice ${invoice.number} — ${total}`;
-  const body =
-    `Hi ${invoice.clientName},\n\n` +
-    `Please find your invoice (${invoice.number}) attached.\n\n` +
-    `Total: ${total}\n` +
-    `Due: ${formatDateLong(invoice.dueDate)}\n\n` +
-    `Thanks,\n${fromName}\n`;
+  const { subject, body } = buildEmailFields(invoice, fromName);
 
   const result = await MailComposer.composeAsync({
     recipients: [invoice.clientEmail],
@@ -145,4 +156,22 @@ export async function emailInvoice(
     attachments: [pdfUri],
   });
   return { ok: true, status: result.status };
+}
+
+export async function shareInvoicePdf(
+  invoice: Invoice,
+  fromName: string,
+): Promise<ShareInvoiceResult> {
+  if (!invoice.clientEmail) return { ok: false, reason: 'no-recipient' };
+  const pdfUri = await generateInvoicePdf(invoice, fromName);
+  const { subject, body } = buildEmailFields(invoice, fromName);
+  // iOS: `url` attaches the file. `message` is included in apps that support it
+  // (Mail uses it as body; many apps show the subject line). Apps that only
+  // accept attachments will just receive the PDF.
+  const result = await Share.share({
+    url: pdfUri,
+    message: `${subject}\n\n${body}`,
+    title: subject,
+  });
+  return { ok: true, action: result.activityType ?? undefined };
 }

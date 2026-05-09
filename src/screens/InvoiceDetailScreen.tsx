@@ -27,7 +27,7 @@ import {
 import { useClients } from '../data/clients';
 import { useProfile } from '../data/profile';
 import { useAuth } from '../lib/auth';
-import { emailInvoice } from '../lib/invoiceEmail';
+import { emailInvoice, shareInvoicePdf } from '../lib/invoiceEmail';
 import { useT, tPlural } from '../i18n';
 
 export default function InvoiceDetailScreen() {
@@ -108,9 +108,10 @@ export default function InvoiceDetailScreen() {
     Alert.alert(t('invoice.reminder_sent_title'), t('invoice.reminder_sent_body', { client: invoice.clientName }));
   };
 
-  const emailToClient = async () => {
+  const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
+
+  const sendViaMail = async () => {
     try {
-      const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
       const result = await emailInvoice(invoice, fromName);
       if (!result.ok) {
         if (result.reason === 'no-recipient') {
@@ -122,6 +123,25 @@ export default function InvoiceDetailScreen() {
     } catch (err) {
       Alert.alert(t('common.error'), (err as Error).message);
     }
+  };
+
+  const shareToOtherApp = async () => {
+    try {
+      const result = await shareInvoicePdf(invoice, fromName);
+      if (!result.ok && result.reason === 'no-recipient') {
+        Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
+      }
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    }
+  };
+
+  const emailToClient = () => {
+    Alert.alert(t('invoice.email_choose_title'), t('invoice.email_choose_body'), [
+      { text: t('invoice.email_choose_mail'), onPress: sendViaMail },
+      { text: t('invoice.email_choose_share'), onPress: shareToOtherApp },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
   };
 
   const confirmDelete = () => {
