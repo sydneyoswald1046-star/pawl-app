@@ -125,8 +125,38 @@ export type ShareInvoiceResult =
   | { ok: true; action: string | undefined }
   | { ok: false; reason: 'no-recipient' };
 
-function buildEmailFields(invoice: Invoice, fromName: string): { subject: string; body: string } {
+export type EmailMode = 'initial' | 'reminder';
+
+function dueStatus(invoice: Invoice): string {
+  const today = new Date();
+  const due = new Date(invoice.dueDate);
+  due.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((due.getTime() - today.getTime()) / 86_400_000);
+  if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} overdue`;
+  if (days === 0) return 'due today';
+  if (days === 1) return 'due tomorrow';
+  return `due in ${days} days`;
+}
+
+function buildEmailFields(
+  invoice: Invoice,
+  fromName: string,
+  mode: EmailMode,
+): { subject: string; body: string } {
   const total = formatMoney(invoice.amount, invoice.currency);
+  if (mode === 'reminder') {
+    return {
+      subject: `Reminder: Invoice ${invoice.number} — ${total}`,
+      body:
+        `Hi ${invoice.clientName},\n\n` +
+        `Just a friendly reminder that invoice ${invoice.number} for ${total} is ${dueStatus(invoice)}. ` +
+        `A copy of the invoice is attached for your reference.\n\n` +
+        `Total: ${total}\n` +
+        `Due: ${formatDateLong(invoice.dueDate)}\n\n` +
+        `Thanks,\n${fromName}\n`,
+    };
+  }
   return {
     subject: `Invoice ${invoice.number} — ${total}`,
     body:
@@ -141,13 +171,14 @@ function buildEmailFields(invoice: Invoice, fromName: string): { subject: string
 export async function emailInvoice(
   invoice: Invoice,
   fromName: string,
+  mode: EmailMode = 'initial',
 ): Promise<EmailInvoiceResult> {
   if (!invoice.clientEmail) return { ok: false, reason: 'no-recipient' };
   const available = await MailComposer.isAvailableAsync();
   if (!available) return { ok: false, reason: 'unavailable' };
 
   const pdfUri = await generateInvoicePdf(invoice, fromName);
-  const { subject, body } = buildEmailFields(invoice, fromName);
+  const { subject, body } = buildEmailFields(invoice, fromName, mode);
 
   const result = await MailComposer.composeAsync({
     recipients: [invoice.clientEmail],
@@ -161,10 +192,11 @@ export async function emailInvoice(
 export async function shareInvoicePdf(
   invoice: Invoice,
   fromName: string,
+  mode: EmailMode = 'initial',
 ): Promise<ShareInvoiceResult> {
   if (!invoice.clientEmail) return { ok: false, reason: 'no-recipient' };
   const pdfUri = await generateInvoicePdf(invoice, fromName);
-  const { subject, body } = buildEmailFields(invoice, fromName);
+  const { subject, body } = buildEmailFields(invoice, fromName, mode);
   // iOS: `url` attaches the file. `message` is included in apps that support it
   // (Mail uses it as body; many apps show the subject line). Apps that only
   // accept attachments will just receive the PDF.

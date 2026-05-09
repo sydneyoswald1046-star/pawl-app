@@ -13,6 +13,9 @@ import {
   formatDueStatus,
   type Invoice,
 } from '../data/invoices';
+import { useProfile } from '../data/profile';
+import { useAuth } from '../lib/auth';
+import { emailInvoice, shareInvoicePdf } from '../lib/invoiceEmail';
 import { useT } from '../i18n';
 
 export default function RemindersScreen() {
@@ -22,6 +25,9 @@ export default function RemindersScreen() {
   const t = useT();
   const [reminded, setReminded] = useState<Set<string>>(new Set());
   const invoices = useInvoices();
+  const profile = useProfile();
+  const { user } = useAuth();
+  const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
 
   const { overdue, upcoming, totalCount, totalAmount } = useMemo(() => {
     const today = new Date();
@@ -40,14 +46,55 @@ export default function RemindersScreen() {
     };
   }, [invoices]);
 
+  const markReminded = (id: string) => {
+    setReminded((prev) => new Set(prev).add(id));
+  };
+
+  const sendReminderViaMail = async (inv: Invoice) => {
+    try {
+      const result = await emailInvoice(inv, fromName, 'reminder');
+      if (!result.ok) {
+        if (result.reason === 'no-recipient') {
+          Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
+        } else {
+          Alert.alert(t('common.error'), t('new_invoice.email_unavailable'));
+        }
+        return;
+      }
+      if (result.status === 'sent') markReminded(inv.id);
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    }
+  };
+
+  const shareReminder = async (inv: Invoice) => {
+    try {
+      const result = await shareInvoicePdf(inv, fromName, 'reminder');
+      if (!result.ok && result.reason === 'no-recipient') {
+        Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
+        return;
+      }
+      if (result.ok) markReminded(inv.id);
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    }
+  };
+
   const sendOne = (inv: Invoice) => {
-    setReminded((prev) => new Set(prev).add(inv.id));
-    // TODO: hand off to backend / email/SMS service
-    Alert.alert(t('reminders.single_sent_title'), t('reminders.single_sent_body', { client: inv.clientName }));
+    if (!inv.clientEmail) {
+      Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
+      return;
+    }
+    Alert.alert(t('invoice.reminder_choose_title'), t('invoice.reminder_choose_body'), [
+      { text: t('invoice.email_choose_mail'), onPress: () => sendReminderViaMail(inv) },
+      { text: t('invoice.email_choose_share'), onPress: () => shareReminder(inv) },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
   };
 
   const sendAll = () => {
-    const toRemind = [...overdue, ...upcoming].filter((i) => !reminded.has(i.id));
+    const toRemind = [...overdue, ...upcoming].filter((i) => !reminded.has(i.id) && i.clientEmail);
+    const skippedNoEmail = [...overdue, ...upcoming].filter((i) => !reminded.has(i.id) && !i.clientEmail).length;
     if (toRemind.length === 0) {
       Alert.alert(t('reminders.all_caught_title'), t('reminders.all_caught_body'));
       return;
@@ -61,18 +108,21 @@ export default function RemindersScreen() {
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('common.send'),
-          onPress: () => {
-            setReminded((prev) => {
-              const next = new Set(prev);
-              toRemind.forEach((i) => next.add(i.id));
-              return next;
-            });
-            Alert.alert(
-              t('reminders.sent_title'),
-              toRemind.length === 1
-                ? t('reminders.sent_body_one')
-                : t('reminders.sent_body_other', { count: toRemind.length })
-            );
+          onPress: async () => {
+            for (const inv of toRemind) {
+              const result = await emailInvoice(inv, fromName, 'reminder');
+              if (result.ok && result.status === 'sent') markReminded(inv.id);
+              if (!result.ok && result.reason === 'unavailable') {
+                Alert.alert(t('common.error'), t('new_invoice.email_unavailable'));
+                return;
+              }
+            }
+            if (skippedNoEmail > 0) {
+              Alert.alert(
+                t('reminders.skipped_no_email_title'),
+                t('reminders.skipped_no_email_body', { count: skippedNoEmail }),
+              );
+            }
           },
         },
       ]

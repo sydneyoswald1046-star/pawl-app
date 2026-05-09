@@ -104,8 +104,42 @@ export default function InvoiceDetailScreen() {
   const { user } = useAuth();
   const profile = useProfile();
 
+  const sendReminderViaMail = async () => {
+    try {
+      const result = await emailInvoice(invoice, fromName, 'reminder');
+      if (!result.ok) {
+        if (result.reason === 'no-recipient') {
+          Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
+        } else {
+          Alert.alert(t('common.error'), t('new_invoice.email_unavailable'));
+        }
+      }
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    }
+  };
+
+  const shareReminderToOtherApp = async () => {
+    try {
+      const result = await shareInvoicePdf(invoice, fromName, 'reminder');
+      if (!result.ok && result.reason === 'no-recipient') {
+        Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
+      }
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    }
+  };
+
   const sendReminder = () => {
-    Alert.alert(t('invoice.reminder_sent_title'), t('invoice.reminder_sent_body', { client: invoice.clientName }));
+    if (!invoice.clientEmail) {
+      Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
+      return;
+    }
+    Alert.alert(t('invoice.reminder_choose_title'), t('invoice.reminder_choose_body'), [
+      { text: t('invoice.email_choose_mail'), onPress: sendReminderViaMail },
+      { text: t('invoice.email_choose_share'), onPress: shareReminderToOtherApp },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
   };
 
   const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
@@ -322,6 +356,17 @@ export default function InvoiceDetailScreen() {
           <Send size={16} color={c.accent} strokeWidth={2.2} />
           <Text style={[styles.secondaryBtnText, { color: c.accent }]}>{t('invoice.email_to_client')}</Text>
         </TouchableOpacity>
+
+        {!paid && (
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={sendReminder}
+            style={[styles.secondaryBtn, { backgroundColor: c.surface, marginTop: 10 }]}
+          >
+            <Send size={16} color={c.amber} strokeWidth={2.2} />
+            <Text style={[styles.secondaryBtnText, { color: c.amber }]}>{t('invoice.send_reminder')}</Text>
+          </TouchableOpacity>
+        )}
 
         {paid && (
           <TouchableOpacity
