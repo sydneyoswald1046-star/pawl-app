@@ -48,6 +48,30 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const editCustomPaymentLink = () => {
+    Alert.prompt(
+      t('settings.custom_payment_link'),
+      t('settings.custom_payment_link_prompt'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.save'),
+          onPress: async (value?: string) => {
+            const trimmed = (value ?? '').trim();
+            try {
+              await updateProfile({ customPaymentLink: trimmed || undefined });
+            } catch (err) {
+              Alert.alert(t('common.error'), (err as Error).message);
+            }
+          },
+        },
+      ],
+      'plain-text',
+      profile.customPaymentLink ?? '',
+      'url',
+    );
+  };
+
   const editBusinessName = () => {
     Alert.prompt(
       t('settings.business_name'),
@@ -121,6 +145,7 @@ export default function SettingsScreen() {
       items: [
         { icon: Briefcase, label: t('settings.business_name'), color: c.accent, trailing: profile.businessName || t('settings.business_name_unset'), onPress: editBusinessName },
         { icon: Banknote, label: t('settings.stripe_connect'), color: stripeStatus === 'active' ? c.green : c.amber, trailing: stripeTrailing, onPress: connectStripe },
+        { icon: DollarSign, label: t('settings.custom_payment_link'), color: c.sub, trailing: profile.customPaymentLink ? t('settings.custom_payment_link_set') : t('settings.custom_payment_link_unset'), onPress: editCustomPaymentLink },
         { icon: Bell, label: t('settings.notifications'), color: c.amber, onPress: () => comingSoon(t('settings.notifications')) },
       ],
     },

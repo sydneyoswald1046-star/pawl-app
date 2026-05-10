@@ -19,6 +19,7 @@ export type UserProfile = {
   stripeAccountStatus?: StripeAccountStatus;
   stripeChargesEnabled?: boolean;
   stripeDetailsSubmitted?: boolean;
+  customPaymentLink?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };

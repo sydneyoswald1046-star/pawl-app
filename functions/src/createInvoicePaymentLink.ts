@@ -36,27 +36,35 @@ export const createInvoicePaymentLink = onDocumentCreated(
       return;
     }
 
-    // Look up the user's Connect account. Without one we can't create a link
-    // because all charges must flow into the user's Stripe, never the platform.
     const userSnap = await admin.firestore().doc(`users/${uid}`).get();
     const profile = userSnap.data() ?? {};
     const stripeAccountId = profile.stripeAccountId as string | undefined;
     const stripeAccountStatus = profile.stripeAccountStatus as string | undefined;
+    const customPaymentLink = (profile.customPaymentLink as string | undefined)?.trim();
 
-    if (!stripeAccountId) {
-      logger.info('Skipping payment link: user has no Connect account', { uid, invoiceId });
-      await snap.ref.update({
-        paymentLinkPending: 'connect_required',
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    const stripeReady = stripeAccountId && stripeAccountStatus === 'active';
+
+    // Stripe takes priority. Fall back to the user's custom link if they
+    // haven't connected Stripe (or are still verifying). If neither exists,
+    // mark the invoice as pending so the UI can prompt them to connect.
+    if (!stripeReady) {
+      if (customPaymentLink) {
+        await snap.ref.update({
+          paymentLinkUrl: customPaymentLink,
+          paymentLinkSource: 'custom',
+          paymentLinkPending: admin.firestore.FieldValue.delete(),
+          paymentLinkError: admin.firestore.FieldValue.delete(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        logger.info('Used custom payment link', { uid, invoiceId });
+        return;
+      }
+      const reason = stripeAccountId ? 'connect_pending' : 'connect_required';
+      logger.info('Skipping payment link: no payment method configured', {
+        uid, invoiceId, reason,
       });
-      return;
-    }
-    if (stripeAccountStatus !== 'active') {
-      logger.info('Skipping payment link: Connect account not active yet', {
-        uid, invoiceId, stripeAccountStatus,
-      });
       await snap.ref.update({
-        paymentLinkPending: 'connect_pending',
+        paymentLinkPending: reason,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       return;
@@ -109,6 +117,7 @@ export const createInvoicePaymentLink = onDocumentCreated(
 
       await snap.ref.update({
         paymentLinkUrl: paymentLink.url,
+        paymentLinkSource: 'stripe',
         stripeProductId: product.id,
         stripePriceId: price.id,
         stripePaymentLinkId: paymentLink.id,

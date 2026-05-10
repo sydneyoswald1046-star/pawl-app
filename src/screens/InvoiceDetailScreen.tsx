@@ -279,11 +279,15 @@ export default function InvoiceDetailScreen() {
         {!paid && invoice.paymentLinkUrl && (
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => Linking.openURL(invoice.paymentLinkUrl!)}
+            onPress={() => Linking.openURL(invoice.paymentLinkUrl!).catch(() => {})}
             style={[styles.payLinkCard, { backgroundColor: c.accent }]}
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.payLinkTitle}>{t('invoice.pay_link_title')}</Text>
+              <Text style={styles.payLinkTitle}>
+                {invoice.paymentLinkSource === 'custom'
+                  ? t('invoice.pay_link_title_custom')
+                  : t('invoice.pay_link_title')}
+              </Text>
               <Text style={styles.payLinkSub} numberOfLines={1}>
                 {invoice.paymentLinkUrl}
               </Text>
