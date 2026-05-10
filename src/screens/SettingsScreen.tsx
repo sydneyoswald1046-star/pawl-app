@@ -25,7 +25,7 @@ export default function SettingsScreen() {
   const comingSoon = (label: string) =>
     Alert.alert(label, t('settings.coming_soon_body', { label }));
 
-  const SUPPORT_EMAIL = 'support@payly.app';
+  const SUPPORT_EMAIL = 'payly-stripe@proton.me';
 
   const openNotifications = () => nav.navigate('Notifications');
 
