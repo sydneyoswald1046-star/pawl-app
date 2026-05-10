@@ -23,6 +23,7 @@ import ClientsScreen from './src/screens/ClientsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import TapToReceiveScreen from './src/screens/TapToReceiveScreen';
 import RemindersScreen from './src/screens/RemindersScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 import NewInvoiceScreen from './src/screens/NewInvoiceScreen';
 import ClientDetailScreen from './src/screens/ClientDetailScreen';
 import ClientFormScreen from './src/screens/ClientFormScreen';
@@ -124,6 +125,7 @@ function AppStack() {
       <Stack.Screen name="Tabs" component={TabNav} />
       <Stack.Screen name="TapToReceive" component={TapToReceiveScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Reminders" component={RemindersScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="NewInvoice" component={NewInvoiceScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="ClientDetail" component={ClientDetailScreen} />
       <Stack.Screen name="ClientForm" component={ClientFormScreen} options={{ presentation: 'modal' }} />

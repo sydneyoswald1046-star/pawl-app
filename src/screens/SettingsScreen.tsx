@@ -2,12 +2,15 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Sun, Moon, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase, Banknote } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Linking } from 'react-native';
 import { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useI18n, SUPPORTED_LOCALES, LANGUAGE_NAMES, type Locale } from '../i18n';
 import { useAuth } from '../lib/auth';
 import { useProfile, updateProfile } from '../data/profile';
 import { startStripeOnboarding } from '../lib/stripeConnect';
+import { changePassword, deleteAccount } from '../lib/account';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'NGN', 'ZAR'];
 
@@ -17,9 +20,99 @@ export default function SettingsScreen() {
   const { t, locale, setLocale } = useI18n();
   const { user, signOut: authSignOut } = useAuth();
   const profile = useProfile();
+  const nav = useNavigation<any>();
 
   const comingSoon = (label: string) =>
     Alert.alert(label, t('settings.coming_soon_body', { label }));
+
+  const SUPPORT_EMAIL = 'support@payly.app';
+
+  const openNotifications = () => nav.navigate('Notifications');
+
+  const openHelp = () => {
+    Alert.alert(t('settings.help'), undefined, [
+      {
+        text: t('settings.help_contact'),
+        onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Payly support')}`),
+      },
+      {
+        text: t('settings.help_about'),
+        onPress: () => Alert.alert(t('settings.about_title'), t('settings.about_body', { email: user?.email ?? '—' })),
+      },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  };
+
+  const promptChangePassword = () => {
+    Alert.prompt(
+      t('settings.change_password'),
+      t('settings.change_password_current'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.continue'),
+          onPress: (current?: string) => {
+            const cur = current ?? '';
+            if (!cur) return;
+            Alert.prompt(
+              t('settings.change_password'),
+              t('settings.change_password_new'),
+              [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('common.save'),
+                  onPress: async (next?: string) => {
+                    const np = (next ?? '').trim();
+                    if (np.length < 6) {
+                      Alert.alert(t('common.error'), t('auth.error.weakPassword'));
+                      return;
+                    }
+                    try {
+                      await changePassword(cur, np);
+                      Alert.alert(t('settings.change_password_success'));
+                    } catch (err) {
+                      Alert.alert(t('common.error'), (err as Error).message);
+                    }
+                  },
+                },
+              ],
+              'secure-text',
+            );
+          },
+        },
+      ],
+      'secure-text',
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      t('settings.delete_account_title'),
+      t('settings.delete_account_body'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.delete_account_confirm'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+            } catch (err) {
+              Alert.alert(t('common.error'), (err as Error).message);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const openPrivacy = () => {
+    Alert.alert(t('settings.privacy'), undefined, [
+      { text: t('settings.change_password'), onPress: promptChangePassword },
+      { text: t('settings.delete_account'), style: 'destructive', onPress: confirmDeleteAccount },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  };
 
   const signOut = () =>
     Alert.alert(t('settings.sign_out_confirm_title'), t('settings.sign_out_confirm_body'), [
@@ -146,7 +239,7 @@ export default function SettingsScreen() {
         { icon: Briefcase, label: t('settings.business_name'), color: c.accent, trailing: profile.businessName || t('settings.business_name_unset'), onPress: editBusinessName },
         { icon: Banknote, label: t('settings.stripe_connect'), color: stripeStatus === 'active' ? c.green : c.amber, trailing: stripeTrailing, onPress: connectStripe },
         { icon: DollarSign, label: t('settings.custom_payment_link'), color: c.sub, trailing: profile.customPaymentLink ? t('settings.custom_payment_link_set') : t('settings.custom_payment_link_unset'), onPress: editCustomPaymentLink },
-        { icon: Bell, label: t('settings.notifications'), color: c.amber, onPress: () => comingSoon(t('settings.notifications')) },
+        { icon: Bell, label: t('settings.notifications'), color: c.amber, onPress: openNotifications },
       ],
     },
     {
@@ -154,8 +247,8 @@ export default function SettingsScreen() {
       items: [
         { icon: Globe, label: t('settings.language'), color: c.accent, trailing: LANGUAGE_NAMES[locale], onPress: chooseLanguage },
         { icon: DollarSign, label: t('settings.default_currency'), color: c.green, trailing: profile.defaultCurrency, onPress: chooseCurrency },
-        { icon: Shield, label: t('settings.privacy'), color: c.sub, onPress: () => comingSoon(t('settings.privacy')) },
-        { icon: CircleHelp, label: t('settings.help'), color: c.sub, onPress: () => comingSoon(t('settings.help')) },
+        { icon: Shield, label: t('settings.privacy'), color: c.sub, onPress: openPrivacy },
+        { icon: CircleHelp, label: t('settings.help'), color: c.sub, onPress: openHelp },
       ],
     },
   ];

@@ -20,6 +20,9 @@ export type UserProfile = {
   stripeChargesEnabled?: boolean;
   stripeDetailsSubmitted?: boolean;
   customPaymentLink?: string;
+  notifyOnPaid?: boolean;
+  notifyOnUpcoming?: boolean;
+  notifyOnOverdue?: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
