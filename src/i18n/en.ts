@@ -309,6 +309,7 @@ const en = {
 
   // Settings
   'settings.title': 'Settings',
+  'settings.hero_sub': 'Account, payments, and preferences for Payly.',
   'settings.pro': 'PRO',
   'settings.dark_mode': 'Dark Mode',
   'settings.light_mode': 'Light Mode',

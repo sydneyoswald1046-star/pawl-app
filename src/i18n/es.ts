@@ -311,6 +311,7 @@ const es: Record<keyof typeof en, string> = {
 
   // Settings
   'settings.title': 'Ajustes',
+  'settings.hero_sub': 'Cuenta, pagos y preferencias de Payly.',
   'settings.pro': 'PRO',
   'settings.dark_mode': 'Modo oscuro',
   'settings.light_mode': 'Modo claro',
