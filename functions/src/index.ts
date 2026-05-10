@@ -6,3 +6,6 @@ if (admin.apps.length === 0) {
 
 export { createInvoicePaymentLink } from './createInvoicePaymentLink';
 export { stripeWebhook } from './stripeWebhook';
+export { createConnectAccountLink } from './createConnectAccountLink';
+export { stripeConnectReturn } from './stripeConnectReturn';
+export { connectWebhook } from './connectWebhook';

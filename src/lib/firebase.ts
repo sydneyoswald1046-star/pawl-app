@@ -13,6 +13,7 @@ import {
   getFirestore,
   type Firestore,
 } from 'firebase/firestore';
+import { getFunctions, type Functions } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
@@ -65,6 +66,8 @@ export const db: Firestore =
         localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
       })
     : getFirestore(app);
+
+export const functions: Functions = getFunctions(app, 'us-central1');
 
 export const googleClientIds = {
   webClientId: extra.googleWebClientId,

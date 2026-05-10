@@ -10,9 +10,15 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
+export type StripeAccountStatus = 'pending' | 'incomplete' | 'active';
+
 export type UserProfile = {
   defaultCurrency: string;
   businessName?: string;
+  stripeAccountId?: string;
+  stripeAccountStatus?: StripeAccountStatus;
+  stripeChargesEnabled?: boolean;
+  stripeDetailsSubmitted?: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };

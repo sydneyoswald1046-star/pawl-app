@@ -46,6 +46,7 @@ export type Invoice = {
   localCreatedAt: number;
   paymentLinkUrl?: string;
   paymentLinkError?: string;
+  paymentLinkPending?: 'connect_required' | 'connect_pending';
   stripeProductId?: string;
   stripePriceId?: string;
   stripePaymentLinkId?: string;

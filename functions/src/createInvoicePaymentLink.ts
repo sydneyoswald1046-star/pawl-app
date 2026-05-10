@@ -28,11 +28,37 @@ export const createInvoicePaymentLink = onDocumentCreated(
     const { uid, invoiceId } = event.params;
 
     if (!invoice.amount || invoice.amount <= 0) {
-      logger.info('Skipping payment link: invoice has no positive amount', { uid, invoiceId });
+      logger.info('Skipping payment link: no positive amount', { uid, invoiceId });
       return;
     }
     if (invoice.status === 'paid') {
-      logger.info('Skipping payment link: invoice already paid', { uid, invoiceId });
+      logger.info('Skipping payment link: already paid', { uid, invoiceId });
+      return;
+    }
+
+    // Look up the user's Connect account. Without one we can't create a link
+    // because all charges must flow into the user's Stripe, never the platform.
+    const userSnap = await admin.firestore().doc(`users/${uid}`).get();
+    const profile = userSnap.data() ?? {};
+    const stripeAccountId = profile.stripeAccountId as string | undefined;
+    const stripeAccountStatus = profile.stripeAccountStatus as string | undefined;
+
+    if (!stripeAccountId) {
+      logger.info('Skipping payment link: user has no Connect account', { uid, invoiceId });
+      await snap.ref.update({
+        paymentLinkPending: 'connect_required',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+    if (stripeAccountStatus !== 'active') {
+      logger.info('Skipping payment link: Connect account not active yet', {
+        uid, invoiceId, stripeAccountStatus,
+      });
+      await snap.ref.update({
+        paymentLinkPending: 'connect_pending',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
       return;
     }
 
@@ -43,47 +69,59 @@ export const createInvoicePaymentLink = onDocumentCreated(
       : Math.round(invoice.amount * 100);
 
     try {
-      const product = await stripe.products.create({
-        name: `Invoice ${invoice.number ?? invoiceId}`,
-        description: invoice.service || `Invoice for ${invoice.clientName ?? 'client'}`,
-        metadata: {
-          payly_uid: uid,
-          payly_invoice_id: invoiceId,
-        },
-      });
-
-      const price = await stripe.prices.create({
-        product: product.id,
-        unit_amount: amountMinorUnits,
-        currency,
-      });
-
-      const paymentLink = await stripe.paymentLinks.create({
-        line_items: [{ price: price.id, quantity: 1 }],
-        metadata: {
-          payly_uid: uid,
-          payly_invoice_id: invoiceId,
-        },
-        after_completion: {
-          type: 'hosted_confirmation',
-          hosted_confirmation: {
-            custom_message: `Thanks! Your payment for invoice ${invoice.number ?? ''} was received.`,
+      const product = await stripe.products.create(
+        {
+          name: `Invoice ${invoice.number ?? invoiceId}`,
+          description: invoice.service || `Invoice for ${invoice.clientName ?? 'client'}`,
+          metadata: {
+            payly_uid: uid,
+            payly_invoice_id: invoiceId,
           },
         },
-      });
+        { stripeAccount: stripeAccountId },
+      );
+
+      const price = await stripe.prices.create(
+        {
+          product: product.id,
+          unit_amount: amountMinorUnits,
+          currency,
+        },
+        { stripeAccount: stripeAccountId },
+      );
+
+      const paymentLink = await stripe.paymentLinks.create(
+        {
+          line_items: [{ price: price.id, quantity: 1 }],
+          metadata: {
+            payly_uid: uid,
+            payly_invoice_id: invoiceId,
+          },
+          after_completion: {
+            type: 'hosted_confirmation',
+            hosted_confirmation: {
+              custom_message: `Thanks! Your payment for invoice ${invoice.number ?? ''} was received.`,
+            },
+          },
+        },
+        { stripeAccount: stripeAccountId },
+      );
 
       await snap.ref.update({
         paymentLinkUrl: paymentLink.url,
         stripeProductId: product.id,
         stripePriceId: price.id,
         stripePaymentLinkId: paymentLink.id,
+        paymentLinkPending: admin.firestore.FieldValue.delete(),
+        paymentLinkError: admin.firestore.FieldValue.delete(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      logger.info('Created payment link', { uid, invoiceId, url: paymentLink.url });
+      logger.info('Created payment link on Connect account', {
+        uid, invoiceId, accountId: stripeAccountId, url: paymentLink.url,
+      });
     } catch (err) {
       logger.error('Failed to create payment link', { uid, invoiceId, err });
-      // Surface the error on the doc so the app can show a hint
       await snap.ref.update({
         paymentLinkError: (err as Error).message,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -92,8 +130,6 @@ export const createInvoicePaymentLink = onDocumentCreated(
   },
 );
 
-// Currencies Stripe treats as zero-decimal (the amount is already in the
-// smallest unit of the currency). Add as needed.
 function zeroDecimal(currency: string): boolean {
   return ['bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf'].includes(currency);
 }

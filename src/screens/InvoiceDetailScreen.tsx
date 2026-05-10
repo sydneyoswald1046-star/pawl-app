@@ -293,7 +293,13 @@ export default function InvoiceDetailScreen() {
         )}
         {!paid && !invoice.paymentLinkUrl && !invoice.paymentLinkError && (
           <View style={[styles.payLinkCard, { backgroundColor: c.surface, borderWidth: 1, borderColor: c.faint + '40', borderStyle: 'dashed' }]}>
-            <Text style={[styles.payLinkSub, { color: c.sub }]}>{t('invoice.pay_link_pending')}</Text>
+            <Text style={[styles.payLinkSub, { color: c.sub }]}>
+              {invoice.paymentLinkPending === 'connect_required'
+                ? t('invoice.pay_link_connect_required')
+                : invoice.paymentLinkPending === 'connect_pending'
+                  ? t('invoice.pay_link_connect_pending')
+                  : t('invoice.pay_link_pending')}
+            </Text>
           </View>
         )}
         {!paid && invoice.paymentLinkError && (

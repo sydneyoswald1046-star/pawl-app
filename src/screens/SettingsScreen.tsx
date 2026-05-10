@@ -1,11 +1,13 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sun, Moon, CreditCard, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase } from 'lucide-react-native';
+import { Sun, Moon, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase, Banknote } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
 import { useTheme } from '../theme';
 import { useI18n, SUPPORTED_LOCALES, LANGUAGE_NAMES, type Locale } from '../i18n';
 import { useAuth } from '../lib/auth';
 import { useProfile, updateProfile } from '../data/profile';
+import { startStripeOnboarding } from '../lib/stripeConnect';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'NGN', 'ZAR'];
 
@@ -89,6 +91,27 @@ export default function SettingsScreen() {
     );
   };
 
+  const [connecting, setConnecting] = useState(false);
+  const connectStripe = async () => {
+    if (connecting) return;
+    setConnecting(true);
+    try {
+      await startStripeOnboarding();
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const stripeStatus = profile.stripeAccountStatus;
+  const stripeTrailing =
+    stripeStatus === 'active'
+      ? t('settings.stripe_connected')
+      : stripeStatus === 'pending' || stripeStatus === 'incomplete'
+        ? t('settings.stripe_pending')
+        : t('settings.stripe_not_connected');
+
   const initial = (user?.email?.[0] ?? 'P').toUpperCase();
   const displayEmail = user?.email ?? '';
 
@@ -97,7 +120,7 @@ export default function SettingsScreen() {
       title: t('settings.section_account'),
       items: [
         { icon: Briefcase, label: t('settings.business_name'), color: c.accent, trailing: profile.businessName || t('settings.business_name_unset'), onPress: editBusinessName },
-        { icon: CreditCard, label: t('settings.payment_methods'), color: c.green, onPress: () => comingSoon(t('settings.payment_methods')) },
+        { icon: Banknote, label: t('settings.stripe_connect'), color: stripeStatus === 'active' ? c.green : c.amber, trailing: stripeTrailing, onPress: connectStripe },
         { icon: Bell, label: t('settings.notifications'), color: c.amber, onPress: () => comingSoon(t('settings.notifications')) },
       ],
     },
