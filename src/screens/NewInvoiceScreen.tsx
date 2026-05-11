@@ -31,6 +31,8 @@ import { useClients, addClient, type ClientWithStats } from '../data/clients';
 import { useProfile } from '../data/profile';
 import { useAuth } from '../lib/auth';
 import { emailInvoice, shareInvoicePdf } from '../lib/invoiceEmail';
+import { getEntitlements, invoiceCountThisMonth, FREE_INVOICE_LIMIT_PER_MONTH } from '../lib/entitlements';
+import { useInvoices } from '../data/invoices';
 import { useT } from '../i18n';
 
 type LineItem = { id: string; description: string; amount: string };
@@ -46,7 +48,9 @@ export default function NewInvoiceScreen() {
   const prefillClientId = route.params?.clientId;
   const profile = useProfile();
   const clients = useClients();
+  const allInvoices = useInvoices();
   const { user } = useAuth();
+  const ent = getEntitlements(profile);
 
   const DUE_OPTIONS: { days: DueOption; label: string }[] = [
     { days: 7, label: t('new_invoice.net_7') },
@@ -96,6 +100,23 @@ export default function NewInvoiceScreen() {
 
   const send = async () => {
     if (!canSend || !picked) return;
+
+    // Free tier gate: hard limit per month.
+    if (!ent.isPro) {
+      const used = invoiceCountThisMonth(allInvoices);
+      if (used >= FREE_INVOICE_LIMIT_PER_MONTH) {
+        Alert.alert(
+          t('paywall.limit_title'),
+          t('paywall.limit_body', { limit: FREE_INVOICE_LIMIT_PER_MONTH }),
+          [
+            { text: t('paywall.continue_free'), style: 'cancel' },
+            { text: t('paywall.cta_upgrade'), onPress: () => nav.navigate('Paywall') },
+          ],
+        );
+        return;
+      }
+    }
+
     setSaving(true);
 
     const todayDate = new Date();
@@ -130,7 +151,8 @@ export default function NewInvoiceScreen() {
         dueDate,
       });
 
-      const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
+      const fromName = (ent.businessNameOnPdf && profile.businessName) || user?.displayName || user?.email || 'Payly';
+      const pdfOpts = { showPoweredBy: ent.poweredByFooter };
       // Wait briefly for the Cloud Function to attach a payment link before
       // we open the mail composer. Times out gracefully if the function is
       // slow or fails — email goes out without the link in that case.
@@ -160,7 +182,7 @@ export default function NewInvoiceScreen() {
 
       const sendViaMail = async () => {
         try {
-          const result = await emailInvoice(invoiceForEmail, fromName);
+          const result = await emailInvoice(invoiceForEmail, fromName, 'initial', pdfOpts);
           if (!result.ok && result.reason === 'unavailable') {
             Alert.alert(t('common.error'), t('new_invoice.email_unavailable'));
           }
@@ -173,7 +195,7 @@ export default function NewInvoiceScreen() {
 
       const shareToOtherApp = async () => {
         try {
-          await shareInvoicePdf(invoiceForEmail, fromName);
+          await shareInvoicePdf(invoiceForEmail, fromName, 'initial', pdfOpts);
         } catch (err) {
           Alert.alert(t('common.error'), (err as Error).message);
         } finally {

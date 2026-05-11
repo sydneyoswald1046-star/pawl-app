@@ -29,6 +29,7 @@ import { useClients } from '../data/clients';
 import { useProfile } from '../data/profile';
 import { useAuth } from '../lib/auth';
 import { emailInvoice, shareInvoicePdf } from '../lib/invoiceEmail';
+import { getEntitlements } from '../lib/entitlements';
 import { useT, tPlural } from '../i18n';
 
 export default function InvoiceDetailScreen() {
@@ -107,7 +108,7 @@ export default function InvoiceDetailScreen() {
 
   const sendReminderViaMail = async () => {
     try {
-      const result = await emailInvoice(invoice, fromName, 'reminder');
+      const result = await emailInvoice(invoice, fromName, 'reminder', pdfOpts);
       if (!result.ok) {
         if (result.reason === 'no-recipient') {
           Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
@@ -122,7 +123,7 @@ export default function InvoiceDetailScreen() {
 
   const shareReminderToOtherApp = async () => {
     try {
-      const result = await shareInvoicePdf(invoice, fromName, 'reminder');
+      const result = await shareInvoicePdf(invoice, fromName, 'reminder', pdfOpts);
       if (!result.ok && result.reason === 'no-recipient') {
         Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
       }
@@ -143,11 +144,13 @@ export default function InvoiceDetailScreen() {
     ]);
   };
 
-  const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
+  const ent = getEntitlements(profile);
+  const fromName = (ent.businessNameOnPdf && profile.businessName) || user?.displayName || user?.email || 'Payly';
+  const pdfOpts = { showPoweredBy: ent.poweredByFooter };
 
   const sendViaMail = async () => {
     try {
-      const result = await emailInvoice(invoice, fromName);
+      const result = await emailInvoice(invoice, fromName, 'initial', pdfOpts);
       if (!result.ok) {
         if (result.reason === 'no-recipient') {
           Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
@@ -162,7 +165,7 @@ export default function InvoiceDetailScreen() {
 
   const shareToOtherApp = async () => {
     try {
-      const result = await shareInvoicePdf(invoice, fromName);
+      const result = await shareInvoicePdf(invoice, fromName, 'initial', pdfOpts);
       if (!result.ok && result.reason === 'no-recipient') {
         Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
       }

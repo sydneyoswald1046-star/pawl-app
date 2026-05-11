@@ -10,3 +10,5 @@ export { createConnectAccountLink } from './createConnectAccountLink';
 export { stripeConnectReturn } from './stripeConnectReturn';
 export { connectWebhook } from './connectWebhook';
 export { deleteAccount } from './deleteAccount';
+export { createSubscriptionCheckout } from './createSubscriptionCheckout';
+export { createBillingPortalSession } from './createBillingPortalSession';

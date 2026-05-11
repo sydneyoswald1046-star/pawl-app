@@ -16,6 +16,7 @@ import {
 import { useProfile } from '../data/profile';
 import { useAuth } from '../lib/auth';
 import { emailInvoice, shareInvoicePdf } from '../lib/invoiceEmail';
+import { getEntitlements } from '../lib/entitlements';
 import { useT } from '../i18n';
 
 export default function RemindersScreen() {
@@ -27,7 +28,9 @@ export default function RemindersScreen() {
   const invoices = useInvoices();
   const profile = useProfile();
   const { user } = useAuth();
-  const fromName = profile.businessName || user?.displayName || user?.email || 'Payly';
+  const ent = getEntitlements(profile);
+  const fromName = (ent.businessNameOnPdf && profile.businessName) || user?.displayName || user?.email || 'Payly';
+  const pdfOpts = { showPoweredBy: ent.poweredByFooter };
 
   const { overdue, upcoming, totalCount, totalAmount } = useMemo(() => {
     const today = new Date();
@@ -52,7 +55,7 @@ export default function RemindersScreen() {
 
   const sendReminderViaMail = async (inv: Invoice) => {
     try {
-      const result = await emailInvoice(inv, fromName, 'reminder');
+      const result = await emailInvoice(inv, fromName, 'reminder', pdfOpts);
       if (!result.ok) {
         if (result.reason === 'no-recipient') {
           Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
@@ -69,7 +72,7 @@ export default function RemindersScreen() {
 
   const shareReminder = async (inv: Invoice) => {
     try {
-      const result = await shareInvoicePdf(inv, fromName, 'reminder');
+      const result = await shareInvoicePdf(inv, fromName, 'reminder', pdfOpts);
       if (!result.ok && result.reason === 'no-recipient') {
         Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
         return;
@@ -110,7 +113,7 @@ export default function RemindersScreen() {
           text: t('common.send'),
           onPress: async () => {
             for (const inv of toRemind) {
-              const result = await emailInvoice(inv, fromName, 'reminder');
+              const result = await emailInvoice(inv, fromName, 'reminder', pdfOpts);
               if (result.ok && result.status === 'sent') markReminded(inv.id);
               if (!result.ok && result.reason === 'unavailable') {
                 Alert.alert(t('common.error'), t('new_invoice.email_unavailable'));

@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sun, Moon, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase, Banknote, User } from 'lucide-react-native';
+import { Sun, Moon, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase, Banknote, User, Sparkles } from 'lucide-react-native';
 import { useState, type ComponentType } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
@@ -8,6 +8,8 @@ import { useI18n, SUPPORTED_LOCALES, LANGUAGE_NAMES, type Locale } from '../i18n
 import { useAuth } from '../lib/auth';
 import { useProfile, updateProfile } from '../data/profile';
 import { startStripeOnboarding } from '../lib/stripeConnect';
+import { openBillingPortal } from '../lib/subscriptions';
+import { getEntitlements } from '../lib/entitlements';
 import { changePassword, deleteAccount } from '../lib/account';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'NGN', 'ZAR'];
@@ -154,6 +156,10 @@ export default function SettingsScreen() {
   };
 
   const editCustomPaymentLink = () => {
+    if (!entitlements.customPaymentLink) {
+      nav.navigate('Paywall');
+      return;
+    }
     Alert.prompt(
       t('settings.custom_payment_link'),
       t('settings.custom_payment_link_prompt'),
@@ -218,6 +224,10 @@ export default function SettingsScreen() {
 
   const [connecting, setConnecting] = useState(false);
   const connectStripe = async () => {
+    if (!entitlements.stripeConnect && !profile.stripeAccountId) {
+      nav.navigate('Paywall');
+      return;
+    }
     if (connecting) return;
     setConnecting(true);
     try {
@@ -226,6 +236,23 @@ export default function SettingsScreen() {
       Alert.alert(t('common.error'), (err as Error).message);
     } finally {
       setConnecting(false);
+    }
+  };
+
+  const entitlements = getEntitlements(profile);
+  const subRowTrailing = entitlements.isPro
+    ? (entitlements.status === 'trialing' ? t('settings.sub_trialing') : t('settings.sub_active'))
+    : t('settings.sub_upgrade');
+
+  const onSubscriptionRow = async () => {
+    if (entitlements.isPro && profile.stripeCustomerId) {
+      try {
+        await openBillingPortal();
+      } catch (err) {
+        Alert.alert(t('common.error'), (err as Error).message);
+      }
+    } else {
+      nav.navigate('Paywall');
     }
   };
 
@@ -244,6 +271,7 @@ export default function SettingsScreen() {
       title: t('settings.section_account'),
       rows: [
         { icon: User, iconBg: ICON.blue, label: t('settings.profile'), trailing: user?.email ?? '—', onPress: () => {} },
+        { icon: Sparkles, iconBg: entitlements.isPro ? ICON.indigo : ICON.orange, label: t('settings.subscription'), trailing: subRowTrailing, onPress: onSubscriptionRow },
         { icon: Briefcase, iconBg: ICON.gray, label: t('settings.business_name'), trailing: profile.businessName || t('settings.business_name_unset'), onPress: editBusinessName },
         { icon: Banknote, iconBg: stripeStatus === 'active' ? ICON.green : ICON.orange, label: t('settings.stripe_connect'), trailing: stripeTrailing, onPress: connectStripe },
         { icon: DollarSign, iconBg: ICON.orange, label: t('settings.custom_payment_link'), trailing: profile.customPaymentLink ? t('settings.custom_payment_link_set') : t('settings.custom_payment_link_unset'), onPress: editCustomPaymentLink },

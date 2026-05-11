@@ -24,7 +24,7 @@ function formatDateLong(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function buildInvoiceHtml(invoice: Invoice, fromName: string): string {
+export function buildInvoiceHtml(invoice: Invoice, fromName: string, options: { showPoweredBy?: boolean } = {}): string {
   const items =
     invoice.items && invoice.items.length > 0
       ? invoice.items
@@ -111,12 +111,20 @@ export function buildInvoiceHtml(invoice: Invoice, fromName: string): string {
     : ''}
 
   ${invoice.notes ? `<div class="notes"><div class="label" style="margin-bottom:6px;">Notes</div>${escapeHtml(invoice.notes)}</div>` : ''}
+
+  ${options.showPoweredBy
+    ? `<div style="margin-top:40px;text-align:center;color:#999;font-size:11px;">Sent via Payly</div>`
+    : ''}
 </body>
 </html>`;
 }
 
-export async function generateInvoicePdf(invoice: Invoice, fromName: string): Promise<string> {
-  const html = buildInvoiceHtml(invoice, fromName);
+export async function generateInvoicePdf(
+  invoice: Invoice,
+  fromName: string,
+  options: { showPoweredBy?: boolean } = {},
+): Promise<string> {
+  const html = buildInvoiceHtml(invoice, fromName, options);
   const { uri } = await Print.printToFileAsync({ html, base64: false });
   return uri;
 }
@@ -182,12 +190,13 @@ export async function emailInvoice(
   invoice: Invoice,
   fromName: string,
   mode: EmailMode = 'initial',
+  options: { showPoweredBy?: boolean } = {},
 ): Promise<EmailInvoiceResult> {
   if (!invoice.clientEmail) return { ok: false, reason: 'no-recipient' };
   const available = await MailComposer.isAvailableAsync();
   if (!available) return { ok: false, reason: 'unavailable' };
 
-  const pdfUri = await generateInvoicePdf(invoice, fromName);
+  const pdfUri = await generateInvoicePdf(invoice, fromName, options);
   const { subject, body } = buildEmailFields(invoice, fromName, mode);
 
   const result = await MailComposer.composeAsync({
@@ -203,9 +212,10 @@ export async function shareInvoicePdf(
   invoice: Invoice,
   fromName: string,
   mode: EmailMode = 'initial',
+  options: { showPoweredBy?: boolean } = {},
 ): Promise<ShareInvoiceResult> {
   if (!invoice.clientEmail) return { ok: false, reason: 'no-recipient' };
-  const pdfUri = await generateInvoicePdf(invoice, fromName);
+  const pdfUri = await generateInvoicePdf(invoice, fromName, options);
   const { subject, body } = buildEmailFields(invoice, fromName, mode);
   // iOS: `url` attaches the file. `message` is included in apps that support it
   // (Mail uses it as body; many apps show the subject line). Apps that only

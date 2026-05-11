@@ -12,6 +12,28 @@ import { db } from '../lib/firebase';
 
 export type StripeAccountStatus = 'pending' | 'incomplete' | 'active';
 
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'incomplete'
+  | 'incomplete_expired'
+  | 'unpaid'
+  | 'paused';
+
+export type SubscriptionPlan = 'monthly' | 'yearly';
+
+export type SubscriptionState = {
+  status: SubscriptionStatus;
+  plan?: SubscriptionPlan;
+  customerId: string;
+  subscriptionId: string;
+  currentPeriodEnd: number;
+  trialEnd?: number;
+  cancelAtPeriodEnd: boolean;
+};
+
 export type UserProfile = {
   defaultCurrency: string;
   businessName?: string;
@@ -23,6 +45,8 @@ export type UserProfile = {
   notifyOnPaid?: boolean;
   notifyOnUpcoming?: boolean;
   notifyOnOverdue?: boolean;
+  stripeCustomerId?: string;
+  subscription?: SubscriptionState;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
