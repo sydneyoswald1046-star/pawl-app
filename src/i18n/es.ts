@@ -356,6 +356,8 @@ const es: Record<keyof typeof en, string> = {
   'paywall.cta_upgrade': 'Actualizar',
   'paywall.limit_title': 'Límite del plan gratis alcanzado',
   'paywall.limit_body': 'Las cuentas gratis pueden crear hasta {limit} facturas al mes. Actualiza a Payly Pro para facturas ilimitadas y pagos Stripe.',
+  'paywall.client_limit_title': 'Límite de clientes del plan gratis',
+  'paywall.client_limit_body': 'Las cuentas gratis pueden guardar hasta {limit} clientes. Actualiza a Payly Pro para clientes ilimitados.',
   'settings.custom_payment_link': 'Enlace de pago personalizado',
   'settings.custom_payment_link_prompt': 'Se usa cuando Stripe no está conectado. Pega tu PayPal.me, Venmo, Cash App o cualquier URL para recibir pagos.',
   'settings.custom_payment_link_set': 'Configurado',

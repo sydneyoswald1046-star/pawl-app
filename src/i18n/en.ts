@@ -354,6 +354,8 @@ const en = {
   'paywall.cta_upgrade': 'Upgrade',
   'paywall.limit_title': 'Free plan limit reached',
   'paywall.limit_body': 'Free accounts can create up to {limit} invoices per month. Upgrade to Payly Pro for unlimited invoices and Stripe payments.',
+  'paywall.client_limit_title': 'Free plan client limit reached',
+  'paywall.client_limit_body': 'Free accounts can save up to {limit} clients. Upgrade to Payly Pro for unlimited clients.',
   'settings.custom_payment_link': 'Custom payment link',
   'settings.custom_payment_link_prompt': 'Used when Stripe isn\'t connected. Paste your PayPal.me, Venmo, Cash App, or any URL clients can pay you with.',
   'settings.custom_payment_link_set': 'Set',

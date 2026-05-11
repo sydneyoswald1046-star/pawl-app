@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme, useNavigation } from '@react-navigation/native';
@@ -10,6 +10,8 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { ThemeProvider, useTheme } from './src/theme';
 import { I18nProvider, useT } from './src/i18n';
 import { AuthProvider, useAuth } from './src/lib/auth';
+import { useProfile } from './src/data/profile';
+import { getEntitlements } from './src/lib/entitlements';
 import { googleClientIds } from './src/lib/firebase';
 
 GoogleSignin.configure({
@@ -37,12 +39,30 @@ import TabBarBackground, { TAB_BAR_HEIGHT } from './src/components/TabBarBackgro
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+// Show the paywall once per cold launch for users not on Pro. Module-level
+// so it survives React remounts but resets when the app process is killed.
+let paywallShownThisSession = false;
+
 function EmptyScreen() { return <View />; }
 
 function TabNav() {
   const { c, dark } = useTheme();
   const stackNav = useNavigation<any>();
   const t = useT();
+  const profile = useProfile();
+
+  useEffect(() => {
+    if (paywallShownThisSession) return;
+    const ent = getEntitlements(profile);
+    if (ent.isPro) return;
+    // Defer so the tab nav animation finishes first.
+    const handle = setTimeout(() => {
+      if (paywallShownThisSession) return;
+      paywallShownThisSession = true;
+      stackNav.navigate('Paywall');
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [profile, stackNav]);
 
   return (
     <>

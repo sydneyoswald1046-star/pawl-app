@@ -31,7 +31,7 @@ import { useClients, addClient, type ClientWithStats } from '../data/clients';
 import { useProfile } from '../data/profile';
 import { useAuth } from '../lib/auth';
 import { emailInvoice, shareInvoicePdf } from '../lib/invoiceEmail';
-import { getEntitlements, invoiceCountThisMonth, FREE_INVOICE_LIMIT_PER_MONTH } from '../lib/entitlements';
+import { getEntitlements, invoiceCountThisMonth, FREE_INVOICE_LIMIT_PER_MONTH, FREE_CLIENT_LIMIT } from '../lib/entitlements';
 import { useInvoices } from '../data/invoices';
 import { useT } from '../i18n';
 
@@ -219,6 +219,7 @@ export default function NewInvoiceScreen() {
     return (
       <ClientPicker
         currentClientId={picked?.id ?? null}
+        onUpgradeNeeded={() => { setPickerOpen(false); nav.navigate('Paywall'); }}
         onPick={(c) => {
           setPicked(c);
           setPickerOpen(false);
@@ -424,15 +425,19 @@ function ClientPicker({
   currentClientId,
   onPick,
   onClose,
+  onUpgradeNeeded,
 }: {
   currentClientId: string | null;
   onPick: (client: PickedClient) => void;
   onClose: () => void;
+  onUpgradeNeeded: () => void;
 }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const t = useT();
   const clients = useClients();
+  const profile = useProfile();
+  const pickerEnt = getEntitlements(profile);
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -456,6 +461,10 @@ function ClientPicker({
 
   const submitNew = async () => {
     if (!canSubmitNew) return;
+    if (!pickerEnt.isPro && clients.length >= FREE_CLIENT_LIMIT) {
+      onUpgradeNeeded();
+      return;
+    }
     setSavingNew(true);
     try {
       const id = await addClient({ name: newNameTrimmed, email: newEmailTrimmed });

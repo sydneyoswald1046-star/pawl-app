@@ -15,7 +15,9 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check } from 'lucide-react-native';
 import { useTheme } from '../theme';
-import { useClient, addClient, updateClient } from '../data/clients';
+import { useClient, useClients, addClient, updateClient } from '../data/clients';
+import { useProfile } from '../data/profile';
+import { getEntitlements, FREE_CLIENT_LIMIT } from '../lib/entitlements';
 import { useT } from '../i18n';
 
 type Params = { id?: string };
@@ -29,6 +31,9 @@ export default function ClientFormScreen() {
   const id = route.params?.id;
   const editing = Boolean(id);
   const existing = useClient(id ?? '');
+  const allClients = useClients();
+  const profile = useProfile();
+  const ent = getEntitlements(profile);
 
   const [name, setName] = useState(existing?.name ?? '');
   const [email, setEmail] = useState(existing?.email ?? '');
@@ -43,6 +48,20 @@ export default function ClientFormScreen() {
 
   const save = async () => {
     if (!canSave) return;
+
+    // Free tier client cap. Editing always allowed; only blocks new creates.
+    if (!editing && !ent.isPro && allClients.length >= FREE_CLIENT_LIMIT) {
+      Alert.alert(
+        t('paywall.client_limit_title'),
+        t('paywall.client_limit_body', { limit: FREE_CLIENT_LIMIT }),
+        [
+          { text: t('paywall.continue_free'), style: 'cancel' },
+          { text: t('paywall.cta_upgrade'), onPress: () => nav.navigate('Paywall') },
+        ],
+      );
+      return;
+    }
+
     const payload = {
       name: name.trim(),
       email: emailTrimmed,
