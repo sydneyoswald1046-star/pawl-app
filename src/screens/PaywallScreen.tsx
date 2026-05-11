@@ -96,16 +96,16 @@ export default function PaywallScreen() {
           <PlanCard
             active={plan === 'yearly'}
             onPress={() => setPlan('yearly')}
-            priceLabel="$79"
+            priceLabel="$79.99"
             periodLabel={t('paywall.per_year')}
             ribbon={t('paywall.best_value')}
-            sub={t('paywall.save_27')}
+            sub={t('paywall.save_33')}
             c={c}
           />
           <PlanCard
             active={plan === 'monthly'}
             onPress={() => setPlan('monthly')}
-            priceLabel="$9"
+            priceLabel="$9.99"
             periodLabel={t('paywall.per_month')}
             sub={t('paywall.flex_cancel')}
             c={c}
