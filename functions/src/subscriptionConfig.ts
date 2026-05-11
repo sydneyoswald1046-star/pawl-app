@@ -6,9 +6,8 @@
  * (e.g. doc /config/subscription) and read at function invocation time.
  */
 export const PRICE_IDS = {
-  // TODO: replace with actual price IDs from Stripe Dashboard
-  monthly: 'price_REPLACE_ME_MONTHLY',
-  yearly: 'price_REPLACE_ME_YEARLY',
+  monthly: 'price_1TVuMEHVgAuB3BdcrIj8ybyl',
+  yearly: 'price_1TVuXhHVgAuB3BdcnurPsluO',
 };
 
 export function priceForPlan(plan: 'monthly' | 'yearly'): string {
