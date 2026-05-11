@@ -14,6 +14,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { getFunctions, type Functions } from 'firebase/functions';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
@@ -68,6 +69,7 @@ export const db: Firestore =
     : getFirestore(app);
 
 export const functions: Functions = getFunctions(app, 'us-central1');
+export const storage: FirebaseStorage = getStorage(app);
 
 export const googleClientIds = {
   webClientId: extra.googleWebClientId,

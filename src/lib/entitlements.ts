@@ -11,6 +11,7 @@ export type Entitlements = {
   stripeConnect: boolean;
   customPaymentLink: boolean;
   businessNameOnPdf: boolean;
+  businessLogoOnPdf: boolean;
   poweredByFooter: boolean;
 };
 
@@ -27,6 +28,7 @@ export function getEntitlements(profile: UserProfile | null | undefined): Entitl
     stripeConnect: isPro,
     customPaymentLink: isPro,
     businessNameOnPdf: isPro,
+    businessLogoOnPdf: isPro,
     poweredByFooter: !isPro, // free PDFs include a "Sent via Payly" footer
   };
 }

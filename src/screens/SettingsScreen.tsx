@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sun, Moon, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase, Banknote, User, Sparkles } from 'lucide-react-native';
+import { Sun, Moon, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase, Banknote, User, Sparkles, Image as ImageIcon } from 'lucide-react-native';
 import { useState, type ComponentType } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
@@ -11,6 +11,7 @@ import { startStripeOnboarding } from '../lib/stripeConnect';
 import { openBillingPortal } from '../lib/subscriptions';
 import { getEntitlements } from '../lib/entitlements';
 import { changePassword, deleteAccount } from '../lib/account';
+import { pickAndUploadBusinessLogo, clearBusinessLogo } from '../lib/branding';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY', 'INR', 'BRL', 'MXN', 'NGN', 'ZAR'];
 
@@ -183,6 +184,40 @@ export default function SettingsScreen() {
     );
   };
 
+  const editBusinessLogo = () => {
+    if (!entitlements.businessLogoOnPdf) {
+      nav.navigate('Paywall');
+      return;
+    }
+    const opts: Array<{ text: string; style?: 'cancel' | 'destructive'; onPress?: () => void | Promise<void> }> = [
+      {
+        text: profile.businessLogoUrl ? t('settings.business_logo_replace') : t('settings.business_logo_upload'),
+        onPress: async () => {
+          try {
+            await pickAndUploadBusinessLogo();
+          } catch (err) {
+            Alert.alert(t('common.error'), (err as Error).message);
+          }
+        },
+      },
+    ];
+    if (profile.businessLogoUrl) {
+      opts.push({
+        text: t('settings.business_logo_remove'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await clearBusinessLogo();
+          } catch (err) {
+            Alert.alert(t('common.error'), (err as Error).message);
+          }
+        },
+      });
+    }
+    opts.push({ text: t('common.cancel'), style: 'cancel' });
+    Alert.alert(t('settings.business_logo'), undefined, opts);
+  };
+
   const editBusinessName = () => {
     Alert.prompt(
       t('settings.business_name'),
@@ -273,6 +308,7 @@ export default function SettingsScreen() {
         { icon: User, iconBg: ICON.blue, label: t('settings.profile'), trailing: user?.email ?? '—', onPress: () => {} },
         { icon: Sparkles, iconBg: entitlements.isPro ? ICON.indigo : ICON.orange, label: t('settings.subscription'), trailing: subRowTrailing, onPress: onSubscriptionRow },
         { icon: Briefcase, iconBg: ICON.gray, label: t('settings.business_name'), trailing: profile.businessName || t('settings.business_name_unset'), onPress: editBusinessName },
+        { icon: ImageIcon, iconBg: ICON.indigo, label: t('settings.business_logo'), trailing: profile.businessLogoUrl ? t('settings.business_logo_set') : t('settings.business_logo_unset'), onPress: editBusinessLogo },
         { icon: Banknote, iconBg: stripeStatus === 'active' ? ICON.green : ICON.orange, label: t('settings.stripe_connect'), trailing: stripeTrailing, onPress: connectStripe },
         { icon: DollarSign, iconBg: ICON.orange, label: t('settings.custom_payment_link'), trailing: profile.customPaymentLink ? t('settings.custom_payment_link_set') : t('settings.custom_payment_link_unset'), onPress: editCustomPaymentLink },
         { icon: Bell, iconBg: ICON.red, label: t('settings.notifications'), onPress: openNotifications },

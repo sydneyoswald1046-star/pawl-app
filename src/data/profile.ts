@@ -37,6 +37,8 @@ export type SubscriptionState = {
 export type UserProfile = {
   defaultCurrency: string;
   businessName?: string;
+  businessLogoUrl?: string;
+  businessLogoPath?: string;
   stripeAccountId?: string;
   stripeAccountStatus?: StripeAccountStatus;
   stripeChargesEnabled?: boolean;

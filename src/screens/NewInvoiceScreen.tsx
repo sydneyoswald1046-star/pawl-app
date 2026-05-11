@@ -152,7 +152,10 @@ export default function NewInvoiceScreen() {
       });
 
       const fromName = (ent.businessNameOnPdf && profile.businessName) || user?.displayName || user?.email || 'Payly';
-      const pdfOpts = { showPoweredBy: ent.poweredByFooter };
+      const pdfOpts = {
+        showPoweredBy: ent.poweredByFooter,
+        logoUrl: ent.businessLogoOnPdf ? profile.businessLogoUrl : undefined,
+      };
       // Wait briefly for the Cloud Function to attach a payment link before
       // we open the mail composer. Times out gracefully if the function is
       // slow or fails — email goes out without the link in that case.

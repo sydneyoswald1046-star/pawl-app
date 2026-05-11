@@ -24,7 +24,9 @@ function formatDateLong(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function buildInvoiceHtml(invoice: Invoice, fromName: string, options: { showPoweredBy?: boolean } = {}): string {
+export type PdfOptions = { showPoweredBy?: boolean; logoUrl?: string };
+
+export function buildInvoiceHtml(invoice: Invoice, fromName: string, options: PdfOptions = {}): string {
   const items =
     invoice.items && invoice.items.length > 0
       ? invoice.items
@@ -63,9 +65,14 @@ export function buildInvoiceHtml(invoice: Invoice, fromName: string, options: { 
 </head>
 <body>
   <div class="header">
-    <div>
-      <h1>Invoice</h1>
-      <div class="muted">${escapeHtml(fromName)}</div>
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      ${options.logoUrl
+        ? `<img src="${escapeHtml(options.logoUrl)}" alt="" style="width:48px;height:48px;border-radius:8px;object-fit:cover;background:#f4f4f5;" />`
+        : ''}
+      <div>
+        <h1>Invoice</h1>
+        <div class="muted">${escapeHtml(fromName)}</div>
+      </div>
     </div>
     <div style="text-align:right;">
       <div class="number">${escapeHtml(invoice.number)}</div>
@@ -122,7 +129,7 @@ export function buildInvoiceHtml(invoice: Invoice, fromName: string, options: { 
 export async function generateInvoicePdf(
   invoice: Invoice,
   fromName: string,
-  options: { showPoweredBy?: boolean } = {},
+  options: PdfOptions = {},
 ): Promise<string> {
   const html = buildInvoiceHtml(invoice, fromName, options);
   const { uri } = await Print.printToFileAsync({ html, base64: false });
@@ -190,7 +197,7 @@ export async function emailInvoice(
   invoice: Invoice,
   fromName: string,
   mode: EmailMode = 'initial',
-  options: { showPoweredBy?: boolean } = {},
+  options: PdfOptions = {},
 ): Promise<EmailInvoiceResult> {
   if (!invoice.clientEmail) return { ok: false, reason: 'no-recipient' };
   const available = await MailComposer.isAvailableAsync();
@@ -212,7 +219,7 @@ export async function shareInvoicePdf(
   invoice: Invoice,
   fromName: string,
   mode: EmailMode = 'initial',
-  options: { showPoweredBy?: boolean } = {},
+  options: PdfOptions = {},
 ): Promise<ShareInvoiceResult> {
   if (!invoice.clientEmail) return { ok: false, reason: 'no-recipient' };
   const pdfUri = await generateInvoicePdf(invoice, fromName, options);
