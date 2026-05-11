@@ -70,6 +70,10 @@ export const createSubscriptionCheckout = onCall(
       success_url: SUCCESS_URL,
       cancel_url: CANCEL_URL,
       allow_promotion_codes: true,
+      automatic_tax: { enabled: true },
+      customer_update: { address: 'auto', name: 'auto' },
+      tax_id_collection: { enabled: true },
+      billing_address_collection: 'required',
     });
 
     if (!session.url) throw new HttpsError('internal', 'Stripe returned no checkout URL');
