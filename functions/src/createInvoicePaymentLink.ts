@@ -2,6 +2,10 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { logger } from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
 import { getStripe, STRIPE_SECRET_KEY } from './stripeClient';
+import {
+  paystackCreatePaymentLink,
+  PAYSTACK_SECRET_KEY,
+} from './paystackCreatePaymentLink';
 
 type InvoiceDoc = {
   number?: string;
@@ -18,7 +22,7 @@ type InvoiceDoc = {
 export const createInvoicePaymentLink = onDocumentCreated(
   {
     document: 'users/{uid}/invoices/{invoiceId}',
-    secrets: [STRIPE_SECRET_KEY],
+    secrets: [STRIPE_SECRET_KEY, PAYSTACK_SECRET_KEY],
     region: 'us-central1',
   },
   async (event) => {
@@ -38,6 +42,24 @@ export const createInvoicePaymentLink = onDocumentCreated(
 
     const userSnap = await admin.firestore().doc(`users/${uid}`).get();
     const profile = userSnap.data() ?? {};
+
+    // Gateway dispatch. A user is tied to exactly one of Stripe or Paystack,
+    // chosen at onboarding based on the country where they collect payments.
+    // The `paymentGateway` field defaults to 'stripe' for backwards
+    // compatibility with users created before Paystack support landed.
+    const gateway = (profile.paymentGateway as string | undefined) ?? 'stripe';
+
+    if (gateway === 'paystack') {
+      await paystackCreatePaymentLink({
+        uid,
+        invoiceId,
+        invoice,
+        profile,
+        invoiceRef: snap.ref,
+      });
+      return;
+    }
+
     const stripeAccountId = profile.stripeAccountId as string | undefined;
     const stripeAccountStatus = profile.stripeAccountStatus as string | undefined;
     const customPaymentLink = (profile.customPaymentLink as string | undefined)?.trim();

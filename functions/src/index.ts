@@ -12,3 +12,9 @@ export { connectWebhook } from './connectWebhook';
 export { deleteAccount } from './deleteAccount';
 export { createSubscriptionCheckout } from './createSubscriptionCheckout';
 export { createBillingPortalSession } from './createBillingPortalSession';
+export { paystackWebhook } from './paystackWebhook';
+export {
+  listPaystackBanks,
+  resolvePaystackAccount,
+  createPaystackSubaccount,
+} from './paystackOnboarding';

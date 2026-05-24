@@ -299,6 +299,25 @@ export default function SettingsScreen() {
         ? t('settings.stripe_pending')
         : t('settings.stripe_not_connected');
 
+  // Gateway choice. Users default to Stripe; users in Paystack-supported
+  // countries can switch by completing the Paystack Connect onboarding,
+  // which sets profile.paymentGateway = 'paystack'.
+  const gateway = profile.paymentGateway ?? 'stripe';
+  const paystackStatus = profile.paystackAccountStatus;
+  const paystackTrailing =
+    paystackStatus === 'active'
+      ? `Connected · ••${profile.paystackAccountLast4 ?? ''}`
+      : paystackStatus === 'inactive' || paystackStatus === 'pending'
+        ? 'Pending'
+        : 'Not connected';
+  const openPaystackConnect = () => {
+    if (!entitlements.stripeConnect && !profile.paystackSubaccountCode) {
+      nav.navigate('Paywall');
+      return;
+    }
+    nav.navigate('PaystackConnect');
+  };
+
   const themeIcon: LucideIcon = dark ? Moon : Sun;
 
   const sections: Array<{ title: string; rows: Row[] }> = [
@@ -309,7 +328,15 @@ export default function SettingsScreen() {
         { icon: Sparkles, iconBg: entitlements.isPro ? ICON.indigo : ICON.orange, label: t('settings.subscription'), trailing: subRowTrailing, onPress: onSubscriptionRow },
         { icon: Briefcase, iconBg: ICON.gray, label: t('settings.business_name'), trailing: profile.businessName || t('settings.business_name_unset'), onPress: editBusinessName },
         { icon: ImageIcon, iconBg: ICON.indigo, label: t('settings.business_logo'), trailing: profile.businessLogoUrl ? t('settings.business_logo_set') : t('settings.business_logo_unset'), onPress: editBusinessLogo },
-        { icon: Banknote, iconBg: stripeStatus === 'active' ? ICON.green : ICON.orange, label: t('settings.stripe_connect'), trailing: stripeTrailing, onPress: connectStripe },
+        gateway === 'paystack'
+          ? { icon: Banknote, iconBg: paystackStatus === 'active' ? ICON.green : ICON.orange, label: 'Bank (Paystack)', trailing: paystackTrailing, onPress: openPaystackConnect }
+          : { icon: Banknote, iconBg: stripeStatus === 'active' ? ICON.green : ICON.orange, label: t('settings.stripe_connect'), trailing: stripeTrailing, onPress: connectStripe },
+        // Always offer the alternative gateway too. Users in Africa can opt
+        // into Paystack; existing Paystack users can flip back to Stripe if
+        // they ever set up a US/EU entity.
+        gateway === 'paystack'
+          ? { icon: Banknote, iconBg: ICON.gray, label: 'Use Stripe instead', trailing: stripeTrailing, onPress: connectStripe }
+          : { icon: Banknote, iconBg: ICON.gray, label: 'Use Paystack (Africa)', trailing: paystackTrailing, onPress: openPaystackConnect },
         { icon: DollarSign, iconBg: ICON.orange, label: t('settings.custom_payment_link'), trailing: profile.customPaymentLink ? t('settings.custom_payment_link_set') : t('settings.custom_payment_link_unset'), onPress: editCustomPaymentLink },
         { icon: Bell, iconBg: ICON.red, label: t('settings.notifications'), onPress: openNotifications },
       ],
