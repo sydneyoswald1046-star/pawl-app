@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sun, Moon, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase, Banknote, User, Sparkles, Image as ImageIcon } from 'lucide-react-native';
+import { Sun, Moon, Bell, Shield, CircleHelp, ChevronRight, LogOut, Globe, DollarSign, Briefcase, Banknote, User, Sparkles, Image as ImageIcon, PlayCircle } from 'lucide-react-native';
 import { useState, type ComponentType } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
@@ -291,6 +291,14 @@ export default function SettingsScreen() {
     }
   };
 
+  const replayWalkthrough = async () => {
+    try {
+      await updateProfile({ onboardingDone: false });
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    }
+  };
+
   const stripeStatus = profile.stripeAccountStatus;
   const stripeTrailing =
     stripeStatus === 'active'
@@ -320,6 +328,7 @@ export default function SettingsScreen() {
         { icon: themeIcon, iconBg: ICON.indigo, label: dark ? t('settings.dark_mode') : t('settings.light_mode'), onPress: toggle },
         { icon: Globe, iconBg: ICON.blue, label: t('settings.language'), trailing: LANGUAGE_NAMES[locale], onPress: chooseLanguage },
         { icon: DollarSign, iconBg: ICON.green, label: t('settings.default_currency'), trailing: profile.defaultCurrency, onPress: chooseCurrency },
+        { icon: PlayCircle, iconBg: ICON.indigo, label: 'Replay walkthrough', onPress: replayWalkthrough },
         { icon: Shield, iconBg: ICON.blue, label: t('settings.privacy'), onPress: openPrivacy },
         { icon: CircleHelp, iconBg: ICON.gray, label: t('settings.help'), onPress: openHelp },
       ],

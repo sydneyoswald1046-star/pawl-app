@@ -38,6 +38,7 @@ import InvoiceDetailScreen from './src/screens/InvoiceDetailScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SplashScreen from './src/screens/SplashScreen';
 import BuyReaderScreen from './src/screens/BuyReaderScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 import TabBarBackground, { TAB_BAR_HEIGHT } from './src/components/TabBarBackground';
 
 const Tab = createBottomTabNavigator();
@@ -170,6 +171,14 @@ function AuthStack() {
   );
 }
 
+function OnboardingStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+    </Stack.Navigator>
+  );
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -192,6 +201,8 @@ export default function App() {
 function AppInner() {
   const { c, dark } = useTheme();
   const { user, initializing } = useAuth();
+  const profile = useProfile();
+  const needsOnboarding = !!user && profile.onboardingDone === false;
   const base = dark ? DarkTheme : DefaultTheme;
   const [splashDone, setSplashDone] = useState(false);
 
@@ -223,10 +234,12 @@ function AppInner() {
           <View style={[styles.center, { backgroundColor: c.bg }]}>
             <ActivityIndicator color={c.accent} />
           </View>
-        ) : user ? (
-          <AppStack />
-        ) : (
+        ) : !user ? (
           <AuthStack />
+        ) : needsOnboarding ? (
+          <OnboardingStack />
+        ) : (
+          <AppStack />
         )}
       </NavigationContainer>
       {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}

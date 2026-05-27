@@ -49,6 +49,10 @@ export type UserProfile = {
   notifyOnOverdue?: boolean;
   stripeCustomerId?: string;
   subscription?: SubscriptionState;
+  // false on freshly-created profiles → app routes to OnboardingScreen
+  // once. Missing field (existing pre-rollout users) treated as true so
+  // they aren't dragged into the tour.
+  onboardingDone?: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
@@ -86,6 +90,7 @@ export function attachProfileListener(uid: string | null) {
       profile = DEFAULT_PROFILE;
       void setDoc(doc(db, 'users', uid), {
         ...DEFAULT_PROFILE,
+        onboardingDone: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
