@@ -43,3 +43,6 @@ yarn-error.*
 # Firebase per-app configs (kept out of repo; supplied at build time)
 google-services.json
 GoogleService-Info.plist
+
+# Firebase CLI cache
+.firebase/
