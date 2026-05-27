@@ -9,6 +9,7 @@ import { Home, FileText, Users, Settings, Plus } from 'lucide-react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { StripeTerminalProvider } from '@stripe/stripe-terminal-react-native';
 import { fetchConnectionToken } from './src/lib/terminal';
+import { configureRevenueCat } from './src/lib/revenuecat';
 import { ThemeProvider, useTheme } from './src/theme';
 import { I18nProvider, useT } from './src/i18n';
 import { AuthProvider, useAuth } from './src/lib/auth';
@@ -193,6 +194,13 @@ function AppInner() {
   const { user, initializing } = useAuth();
   const base = dark ? DarkTheme : DefaultTheme;
   const [splashDone, setSplashDone] = useState(false);
+
+  // Wire RevenueCat to the current Firebase UID so subscription purchases
+  // are scoped to the user across reinstalls + cross-platform.
+  useEffect(() => {
+    if (initializing) return;
+    void configureRevenueCat(user?.uid ?? null);
+  }, [initializing, user?.uid]);
 
   return (
     <View style={{ flex: 1 }}>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Check, Sparkles, Infinity as InfinityIcon, Banknote, FileText, BellRing, Briefcase } from 'lucide-react-native';
+import type { PurchasesPackage } from 'react-native-purchases';
 import { useTheme } from '../theme';
 import { useT } from '../i18n';
 import { useProfile } from '../data/profile';
-import { startSubscriptionCheckout } from '../lib/subscriptions';
+import {
+  getOfferings,
+  purchasePackage,
+  restorePurchases,
+  isConfigured,
+  isProFromCustomerInfo,
+} from '../lib/revenuecat';
 import { getEntitlements } from '../lib/entitlements';
 
-type Plan = 'monthly' | 'yearly';
+type PlanKey = 'monthly' | 'yearly';
 
 export default function PaywallScreen() {
   const { c } = useTheme();
@@ -29,18 +36,78 @@ export default function PaywallScreen() {
   const profile = useProfile();
   const ent = getEntitlements(profile);
 
-  const [plan, setPlan] = useState<Plan>('yearly');
+  const [plan, setPlan] = useState<PlanKey>('yearly');
   const [busy, setBusy] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [packages, setPackages] = useState<{
+    monthly?: PurchasesPackage;
+    yearly?: PurchasesPackage;
+  }>({});
+  const [offeringsError, setOfferingsError] = useState<string>('');
+
+  useEffect(() => {
+    if (!isConfigured()) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const offering = await getOfferings();
+        if (cancelled) return;
+        setPackages({
+          monthly: offering?.monthly ?? undefined,
+          yearly: offering?.annual ?? undefined,
+        });
+      } catch (err) {
+        if (!cancelled) setOfferingsError((err as Error).message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onSubscribe = async () => {
     if (busy) return;
+    const pkg = packages[plan];
+    if (!pkg) {
+      Alert.alert(
+        t('common.error'),
+        'Subscriptions are not available right now. Try again in a moment.',
+      );
+      return;
+    }
     setBusy(true);
     try {
-      await startSubscriptionCheckout(plan);
-    } catch (err) {
+      const info = await purchasePackage(pkg);
+      if (isProFromCustomerInfo(info)) {
+        // Webhook will sync to Firestore within seconds. UI updates when the
+        // profile.subscription field arrives via onSnapshot listener.
+        Alert.alert('Welcome to Pro');
+        nav.goBack();
+      }
+    } catch (err: any) {
+      // RC sets userCancelled on dismissed StoreKit sheets.
+      if (err?.userCancelled) return;
       Alert.alert(t('common.error'), (err as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onRestore = async () => {
+    if (restoring) return;
+    setRestoring(true);
+    try {
+      const info = await restorePurchases();
+      if (isProFromCustomerInfo(info)) {
+        Alert.alert('Restored', 'Your Pro subscription is active.');
+        nav.goBack();
+      } else {
+        Alert.alert('No purchases', 'No active Pro subscription found on this Apple ID.');
+      }
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    } finally {
+      setRestoring(false);
     }
   };
 
@@ -96,7 +163,7 @@ export default function PaywallScreen() {
           <PlanCard
             active={plan === 'yearly'}
             onPress={() => setPlan('yearly')}
-            priceLabel="$79.99"
+            priceLabel={packages.yearly?.product.priceString ?? '—'}
             periodLabel={t('paywall.per_year')}
             ribbon={t('paywall.best_value')}
             sub={t('paywall.save_33')}
@@ -105,12 +172,18 @@ export default function PaywallScreen() {
           <PlanCard
             active={plan === 'monthly'}
             onPress={() => setPlan('monthly')}
-            priceLabel="$9.99"
+            priceLabel={packages.monthly?.product.priceString ?? '—'}
             periodLabel={t('paywall.per_month')}
             sub={t('paywall.flex_cancel')}
             c={c}
           />
         </View>
+
+        {offeringsError !== '' && (
+          <Text style={[styles.fine, { color: c.red, marginTop: 4 }]}>
+            {offeringsError}
+          </Text>
+        )}
 
         <TouchableOpacity
           onPress={onSubscribe}
@@ -136,6 +209,12 @@ export default function PaywallScreen() {
 
         <TouchableOpacity onPress={() => nav.goBack()} style={{ marginTop: 18 }}>
           <Text style={[styles.continueFree, { color: c.sub }]}>{t('paywall.continue_free')}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={onRestore} disabled={restoring} style={{ marginTop: 12 }}>
+          <Text style={[styles.continueFree, { color: c.sub }]}>
+            {restoring ? 'Restoring…' : 'Restore purchases'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

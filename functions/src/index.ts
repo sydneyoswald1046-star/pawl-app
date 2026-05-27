@@ -16,3 +16,4 @@ export {
   createConnectionToken,
   createTerminalPaymentIntent,
 } from './terminal';
+export { revenueCatWebhook } from './revenueCatWebhook';
