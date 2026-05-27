@@ -309,7 +309,7 @@ const en = {
 
   // Settings
   'settings.title': 'Settings',
-  'settings.hero_sub': 'Account, payments, and preferences for Payly.',
+  'settings.hero_sub': 'Account, payments, and preferences for PAWL.',
   'settings.pro': 'PRO',
   'settings.dark_mode': 'Dark Mode',
   'settings.light_mode': 'Light Mode',
@@ -341,14 +341,14 @@ const en = {
   'settings.sub_active': 'Pro',
   'settings.sub_upgrade': 'Upgrade',
 
-  'paywall.title': 'Payly Pro',
+  'paywall.title': 'PAWL Pro',
   'paywall.subtitle': 'Unlock the full invoicing toolkit. Start with a 7-day free trial.',
   'paywall.already_pro': 'YOU\'RE ON PRO',
   'paywall.feature_unlimited': 'Unlimited invoices and clients',
   'paywall.feature_stripe': 'Stripe Connect — get paid directly to your bank',
   'paywall.feature_pdf': 'Branded PDF invoices with your business name',
   'paywall.feature_reminders': 'Automated overdue reminders',
-  'paywall.feature_branding': 'No "Sent via Payly" footer on invoices',
+  'paywall.feature_branding': 'No "Sent via PAWL" footer on invoices',
   'paywall.per_year': 'per year',
   'paywall.per_month': 'per month',
   'paywall.best_value': 'BEST VALUE',
@@ -359,18 +359,18 @@ const en = {
   'paywall.continue_free': 'Continue on free plan',
   'paywall.cta_upgrade': 'Upgrade',
   'paywall.limit_title': 'Free plan limit reached',
-  'paywall.limit_body': 'Free accounts can create up to {limit} invoices per month. Upgrade to Payly Pro for unlimited invoices and Stripe payments.',
+  'paywall.limit_body': 'Free accounts can create up to {limit} invoices per month. Upgrade to PAWL Pro for unlimited invoices and Stripe payments.',
   'paywall.client_limit_title': 'Free plan client limit reached',
-  'paywall.client_limit_body': 'Free accounts can save up to {limit} clients. Upgrade to Payly Pro for unlimited clients.',
+  'paywall.client_limit_body': 'Free accounts can save up to {limit} clients. Upgrade to PAWL Pro for unlimited clients.',
   'settings.custom_payment_link': 'Custom payment link',
   'settings.custom_payment_link_prompt': 'Used when Stripe isn\'t connected. Paste your PayPal.me, Venmo, Cash App, or any URL clients can pay you with.',
   'settings.custom_payment_link_set': 'Set',
   'settings.custom_payment_link_unset': 'None',
 
   'settings.help_contact': 'Contact support',
-  'settings.help_about': 'About Payly',
-  'settings.about_title': 'About Payly',
-  'settings.about_body': 'Payly v1.0.0\nSigned in as {email}',
+  'settings.help_about': 'About PAWL',
+  'settings.about_title': 'About PAWL',
+  'settings.about_body': 'PAWL v1.0.0\nSigned in as {email}',
 
   'settings.change_password': 'Change password',
   'settings.change_password_current': 'Enter your current password',
@@ -398,7 +398,7 @@ const en = {
   'settings.sign_out_confirm_body': 'Are you sure you want to sign out?',
   'settings.signed_out_title': 'Signed out',
   'settings.signed_out_body': 'Auth flow — coming soon.',
-  'settings.version': 'Payly v1.0.0',
+  'settings.version': 'PAWL v1.0.0',
   'settings.coming_soon_body': '{label} — coming soon.',
 
   // Reports & Reminders quick action placeholders

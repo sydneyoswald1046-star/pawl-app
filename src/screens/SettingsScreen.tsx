@@ -44,7 +44,7 @@ export default function SettingsScreen() {
   const profile = useProfile();
   const nav = useNavigation<any>();
 
-  const SUPPORT_EMAIL = 'payly-stripe@proton.me';
+  const SUPPORT_EMAIL = 'pawl-stripe@proton.me';
 
   const openNotifications = () => nav.navigate('Notifications');
 
@@ -52,7 +52,7 @@ export default function SettingsScreen() {
     Alert.alert(t('settings.help'), undefined, [
       {
         text: t('settings.help_contact'),
-        onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Payly support')}`),
+        onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('PAWL support')}`),
       },
       {
         text: t('settings.help_about'),

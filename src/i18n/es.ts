@@ -311,7 +311,7 @@ const es: Record<keyof typeof en, string> = {
 
   // Settings
   'settings.title': 'Ajustes',
-  'settings.hero_sub': 'Cuenta, pagos y preferencias de Payly.',
+  'settings.hero_sub': 'Cuenta, pagos y preferencias de PAWL.',
   'settings.pro': 'PRO',
   'settings.dark_mode': 'Modo oscuro',
   'settings.light_mode': 'Modo claro',
@@ -343,14 +343,14 @@ const es: Record<keyof typeof en, string> = {
   'settings.sub_active': 'Pro',
   'settings.sub_upgrade': 'Actualizar',
 
-  'paywall.title': 'Payly Pro',
+  'paywall.title': 'PAWL Pro',
   'paywall.subtitle': 'Desbloquea toda la facturación. Empieza con 7 días gratis.',
   'paywall.already_pro': 'YA ERES PRO',
   'paywall.feature_unlimited': 'Facturas y clientes ilimitados',
   'paywall.feature_stripe': 'Stripe Connect — recibe pagos en tu cuenta',
   'paywall.feature_pdf': 'PDF con tu marca y nombre de negocio',
   'paywall.feature_reminders': 'Recordatorios automáticos de vencimiento',
-  'paywall.feature_branding': 'Sin pie de página "Enviado con Payly"',
+  'paywall.feature_branding': 'Sin pie de página "Enviado con PAWL"',
   'paywall.per_year': 'al año',
   'paywall.per_month': 'al mes',
   'paywall.best_value': 'MEJOR VALOR',
@@ -361,18 +361,18 @@ const es: Record<keyof typeof en, string> = {
   'paywall.continue_free': 'Continuar con plan gratis',
   'paywall.cta_upgrade': 'Actualizar',
   'paywall.limit_title': 'Límite del plan gratis alcanzado',
-  'paywall.limit_body': 'Las cuentas gratis pueden crear hasta {limit} facturas al mes. Actualiza a Payly Pro para facturas ilimitadas y pagos Stripe.',
+  'paywall.limit_body': 'Las cuentas gratis pueden crear hasta {limit} facturas al mes. Actualiza a PAWL Pro para facturas ilimitadas y pagos Stripe.',
   'paywall.client_limit_title': 'Límite de clientes del plan gratis',
-  'paywall.client_limit_body': 'Las cuentas gratis pueden guardar hasta {limit} clientes. Actualiza a Payly Pro para clientes ilimitados.',
+  'paywall.client_limit_body': 'Las cuentas gratis pueden guardar hasta {limit} clientes. Actualiza a PAWL Pro para clientes ilimitados.',
   'settings.custom_payment_link': 'Enlace de pago personalizado',
   'settings.custom_payment_link_prompt': 'Se usa cuando Stripe no está conectado. Pega tu PayPal.me, Venmo, Cash App o cualquier URL para recibir pagos.',
   'settings.custom_payment_link_set': 'Configurado',
   'settings.custom_payment_link_unset': 'Ninguno',
 
   'settings.help_contact': 'Contactar soporte',
-  'settings.help_about': 'Acerca de Payly',
-  'settings.about_title': 'Acerca de Payly',
-  'settings.about_body': 'Payly v1.0.0\nSesión iniciada como {email}',
+  'settings.help_about': 'Acerca de PAWL',
+  'settings.about_title': 'Acerca de PAWL',
+  'settings.about_body': 'PAWL v1.0.0\nSesión iniciada como {email}',
 
   'settings.change_password': 'Cambiar contraseña',
   'settings.change_password_current': 'Ingresa tu contraseña actual',
@@ -400,7 +400,7 @@ const es: Record<keyof typeof en, string> = {
   'settings.sign_out_confirm_body': '¿Seguro que quieres cerrar sesión?',
   'settings.signed_out_title': 'Sesión cerrada',
   'settings.signed_out_body': 'Flujo de autenticación — próximamente.',
-  'settings.version': 'Payly v1.0.0',
+  'settings.version': 'PAWL v1.0.0',
   'settings.coming_soon_body': '{label} — próximamente.',
 
   // Reports & Reminders placeholders

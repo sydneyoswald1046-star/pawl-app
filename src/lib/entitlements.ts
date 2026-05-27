@@ -29,7 +29,7 @@ export function getEntitlements(profile: UserProfile | null | undefined): Entitl
     customPaymentLink: isPro,
     businessNameOnPdf: isPro,
     businessLogoOnPdf: isPro,
-    poweredByFooter: !isPro, // free PDFs include a "Sent via Payly" footer
+    poweredByFooter: !isPro, // free PDFs include a "Sent via PAWL" footer
   };
 }
 

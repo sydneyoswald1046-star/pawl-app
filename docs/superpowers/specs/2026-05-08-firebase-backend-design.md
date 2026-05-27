@@ -1,4 +1,4 @@
-# Payly Firebase Backend — Design
+# PAWL Firebase Backend — Design
 
 **Date:** 2026-05-08
 **Status:** Proposed
@@ -375,7 +375,7 @@ Map Firebase error codes to i18n keys:
 
 ### Firebase project setup
 
-1. Create new project `payly-prod` (via Firebase MCP `firebase_create_project`)
+1. Create new project `pawl-prod` (via Firebase MCP `firebase_create_project`)
 2. Enable **Authentication**: Email/Password, Google, Apple
 3. Enable **Firestore Database** (production mode)
 4. Register apps:
@@ -424,15 +424,15 @@ After first build, `npm start` Metro talks to the dev client.
 import { ExpoConfig } from 'expo/config';
 
 const config: ExpoConfig = {
-  name: 'Payly',
-  slug: 'payly',
+  name: 'PAWL',
+  slug: 'pawl',
   // ... existing fields from app.json
   ios: {
-    bundleIdentifier: 'com.payly.app',
+    bundleIdentifier: 'com.pawl.app',
     usesAppleSignIn: true,
   },
   android: {
-    package: 'com.payly.app',
+    package: 'com.pawl.app',
   },
   plugins: [
     'expo-apple-authentication',
@@ -481,7 +481,7 @@ auth.password: "Password"
 auth.continueWithGoogle: "Continue with Google"
 auth.continueWithApple: "Continue with Apple"
 auth.signOut: "Sign out"
-auth.signOutConfirm: "Sign out of Payly?"
+auth.signOutConfirm: "Sign out of PAWL?"
 auth.resetEmailSent: "Password reset email sent"
 auth.error.invalidCredential: "Invalid email or password"
 auth.error.emailInUse: "Email already registered"

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace in-memory seed-data stores in Payly with Firebase Auth (email + Google + Apple) and Firestore (offline-first), preserving the existing `useSyncExternalStore` API surface so screens need only minimal changes.
+**Goal:** Replace in-memory seed-data stores in PAWL with Firebase Auth (email + Google + Apple) and Firestore (offline-first), preserving the existing `useSyncExternalStore` API surface so screens need only minimal changes.
 
 **Architecture:** A new `AuthProvider` wraps the app and gates `AppStack` behind a signed-in user. Existing stores (`invoices.ts`, `clients.ts`) keep their public API but swap internals to Firestore `onSnapshot` listeners on `users/{uid}/{collection}`. Invoices store a denormalized snapshot of client name/email so they survive client edits. A new `profile.ts` store holds the user's default currency. Firestore offline persistence makes writes appear instantly and sync when online.
 
@@ -66,7 +66,7 @@ Use Firebase MCP if available, otherwise the Firebase Console at https://console
 If using the MCP:
 ```
 Tool: mcp__plugin_firebase_firebase__firebase_create_project
-Args: { displayName: "Payly", projectId: "payly-prod-<random-suffix>" }
+Args: { displayName: "PAWL", projectId: "pawl-prod-<random-suffix>" }
 ```
 
 Note the resulting `projectId` and `projectNumber`. You'll need both later.
@@ -85,8 +85,8 @@ In Firebase Console → Firestore Database → Create database. Start in **produ
 - [ ] **Step 4: Register the iOS app**
 
 Console → Project Settings → Your apps → Add app → iOS.
-- Bundle ID: `com.payly.app` (we'll set this in `app.config.ts` in a later task)
-- App nickname: `Payly iOS`
+- Bundle ID: `com.pawl.app` (we'll set this in `app.config.ts` in a later task)
+- App nickname: `PAWL iOS`
 - App Store ID: leave blank for now
 
 Download `GoogleService-Info.plist` and save it somewhere outside the repo for reference (we won't commit it).
@@ -94,8 +94,8 @@ Download `GoogleService-Info.plist` and save it somewhere outside the repo for r
 - [ ] **Step 5: Register the Android app**
 
 Console → Add app → Android.
-- Package name: `com.payly.app`
-- App nickname: `Payly Android`
+- Package name: `com.pawl.app`
+- App nickname: `PAWL Android`
 - SHA-1: leave blank for now (we'll add it after the first dev client build via `eas credentials` or local keytool)
 
 Download `google-services.json` for reference. Don't commit.
@@ -103,7 +103,7 @@ Download `google-services.json` for reference. Don't commit.
 - [ ] **Step 6: Register the Web app**
 
 Console → Add app → Web.
-- App nickname: `Payly Web`
+- App nickname: `PAWL Web`
 
 Copy the `firebaseConfig` object shown — these are the values we'll put in `.env.local`. Specifically:
 - `apiKey`
@@ -127,7 +127,7 @@ Confirm your CLI/MCP can see the project:
 Tool: mcp__plugin_firebase_firebase__firebase_list_projects
 ```
 
-Expected: project `payly-prod-*` appears in the list.
+Expected: project `pawl-prod-*` appears in the list.
 
 No commit for this task — just gather credentials. Save them in a temporary scratch file you'll delete after Task 4.
 
@@ -143,7 +143,7 @@ Add all required npm packages.
 
 Run from project root:
 ```bash
-cd /Users/botchtech/Desktop/payly
+cd /Users/botchtech/Desktop/pawl
 npx expo install firebase @react-native-async-storage/async-storage @react-native-google-signin/google-signin expo-apple-authentication expo-dev-client expo-crypto
 ```
 
@@ -194,7 +194,7 @@ GoogleService-Info.plist
 npx expo prebuild
 ```
 
-Expected: prompt for app slug confirmation, then generates `ios/Payly.xcworkspace` and `android/`. Takes 30–90 seconds.
+Expected: prompt for app slug confirmation, then generates `ios/PAWL.xcworkspace` and `android/`. Takes 30–90 seconds.
 
 If the command fails because `app.config.ts` doesn't exist yet (we create it in Task 4), it will still read `app.json` — that's fine for now. We'll re-prebuild after creating `app.config.ts`.
 
@@ -204,7 +204,7 @@ If the command fails because `app.config.ts` doesn't exist yet (we create it in 
 npx expo run:ios
 ```
 
-Expected: Xcode build runs (~3–5 minutes first time). Simulator launches. App opens to current Payly screens. No code changes yet, so behavior is identical to before — this just confirms the dev client compiles.
+Expected: Xcode build runs (~3–5 minutes first time). Simulator launches. App opens to current PAWL screens. No code changes yet, so behavior is identical to before — this just confirms the dev client compiles.
 
 If you hit CocoaPods errors, run `cd ios && pod install && cd ..` then retry.
 
@@ -235,13 +235,13 @@ Replace `app.json` with TypeScript-based config so we can read environment varia
 
 - [ ] **Step 1: Create .env.local**
 
-Create `/Users/botchtech/Desktop/payly/.env.local` with the values from Task 1:
+Create `/Users/botchtech/Desktop/pawl/.env.local` with the values from Task 1:
 
 ```
 EXPO_PUBLIC_FIREBASE_API_KEY=AIza...
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=payly-prod-xxxx.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=payly-prod-xxxx
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=payly-prod-xxxx.appspot.com
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=pawl-prod-xxxx.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=pawl-prod-xxxx
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=pawl-prod-xxxx.appspot.com
 EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789012
 EXPO_PUBLIC_FIREBASE_APP_ID=1:123456789012:web:abcdef0123456789
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=123456789012-abc.apps.googleusercontent.com
@@ -253,7 +253,7 @@ Replace each value with the real ones from Firebase Console.
 
 - [ ] **Step 2: Create .env.example**
 
-Create `/Users/botchtech/Desktop/payly/.env.example` with the same keys but no values:
+Create `/Users/botchtech/Desktop/pawl/.env.example` with the same keys but no values:
 
 ```
 EXPO_PUBLIC_FIREBASE_API_KEY=
@@ -269,14 +269,14 @@ EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME=
 
 - [ ] **Step 3: Create app.config.ts**
 
-Create `/Users/botchtech/Desktop/payly/app.config.ts`:
+Create `/Users/botchtech/Desktop/pawl/app.config.ts`:
 
 ```ts
 import type { ExpoConfig } from 'expo/config';
 
 const config: ExpoConfig = {
-  name: 'Payly',
-  slug: 'payly',
+  name: 'PAWL',
+  slug: 'pawl',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -288,12 +288,12 @@ const config: ExpoConfig = {
     backgroundColor: '#ffffff',
   },
   ios: {
-    bundleIdentifier: 'com.payly.app',
+    bundleIdentifier: 'com.pawl.app',
     supportsTablet: true,
     usesAppleSignIn: true,
   },
   android: {
-    package: 'com.payly.app',
+    package: 'com.pawl.app',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff',
@@ -331,7 +331,7 @@ export default config;
 - [ ] **Step 4: Delete app.json**
 
 ```bash
-rm /Users/botchtech/Desktop/payly/app.json
+rm /Users/botchtech/Desktop/pawl/app.json
 ```
 
 - [ ] **Step 5: Re-prebuild to pick up new config**
@@ -378,7 +378,7 @@ Create the single source of truth for initialized Firebase services.
 
 - [ ] **Step 1: Read Expo Constants extras into the module**
 
-Create `/Users/botchtech/Desktop/payly/src/lib/firebase.ts`:
+Create `/Users/botchtech/Desktop/pawl/src/lib/firebase.ts`:
 
 ```ts
 import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -493,7 +493,7 @@ Create the auth context. Email/password methods only in this task; Google and Ap
 
 - [ ] **Step 1: Create the auth provider**
 
-Create `/Users/botchtech/Desktop/payly/src/lib/auth.tsx`:
+Create `/Users/botchtech/Desktop/pawl/src/lib/auth.tsx`:
 
 ```tsx
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
@@ -622,7 +622,7 @@ Build the sign-in UI. Google/Apple buttons render but are disabled until later t
 
 - [ ] **Step 1: Create the screen**
 
-Create `/Users/botchtech/Desktop/payly/src/screens/SignInScreen.tsx`:
+Create `/Users/botchtech/Desktop/pawl/src/screens/SignInScreen.tsx`:
 
 ```tsx
 import { useState } from 'react';
@@ -702,7 +702,7 @@ export default function SignInScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={[styles.title, { color: c.text }]}>Payly</Text>
+          <Text style={[styles.title, { color: c.text }]}>PAWL</Text>
           <Text style={[styles.subtitle, { color: c.sub }]}>
             {mode === 'signIn' && t('auth.signIn')}
             {mode === 'signUp' && t('auth.signUp')}
@@ -1123,14 +1123,14 @@ This is the biggest single-file change. Replace seed array + sync mutations with
 - [ ] **Step 1: Read the current file in full**
 
 ```bash
-cat /Users/botchtech/Desktop/payly/src/data/invoices.ts
+cat /Users/botchtech/Desktop/pawl/src/data/invoices.ts
 ```
 
 Take note of all exported helpers (`daysUntilDue`, `isOverdue`, `formatDateShort`, `formatDateLong`, `formatDueStatus`, `nextInvoiceNumber`, `addInvoice`, `updateInvoice`, `deleteInvoice`, `useInvoices`, `Invoice` type). All of these must remain exported (some with new signatures).
 
 - [ ] **Step 2: Replace the file**
 
-Replace the contents of `/Users/botchtech/Desktop/payly/src/data/invoices.ts` with the following. Note: the helpers `daysUntilDue`, `isOverdue`, `formatDateShort`, `formatDateLong`, `formatDueStatus` are preserved unchanged from the original — copy them verbatim from your current file into the placeholder at the bottom. The rest is new.
+Replace the contents of `/Users/botchtech/Desktop/pawl/src/data/invoices.ts` with the following. Note: the helpers `daysUntilDue`, `isOverdue`, `formatDateShort`, `formatDateLong`, `formatDueStatus` are preserved unchanged from the original — copy them verbatim from your current file into the placeholder at the bottom. The rest is new.
 
 ```ts
 import { useSyncExternalStore } from 'react';
@@ -1317,14 +1317,14 @@ Same pattern as invoices, plus update the stats join to use `clientId`.
 - [ ] **Step 1: Read the current file**
 
 ```bash
-cat /Users/botchtech/Desktop/payly/src/data/clients.ts
+cat /Users/botchtech/Desktop/pawl/src/data/clients.ts
 ```
 
 Note all exports: `Client`, `ClientWithStats`, `GalleryItem`, `useClients`, `addClient`, `updateClient`, `deleteClient`. The `enrich` step inside `useClients` joins clients with invoices.
 
 - [ ] **Step 2: Replace the file**
 
-Replace the contents of `/Users/botchtech/Desktop/payly/src/data/clients.ts` with:
+Replace the contents of `/Users/botchtech/Desktop/pawl/src/data/clients.ts` with:
 
 ```ts
 import { useMemo, useSyncExternalStore } from 'react';
@@ -1505,7 +1505,7 @@ A new module store for `users/{uid}` profile doc holding `defaultCurrency`.
 
 - [ ] **Step 1: Create the profile store**
 
-Create `/Users/botchtech/Desktop/payly/src/data/profile.ts`:
+Create `/Users/botchtech/Desktop/pawl/src/data/profile.ts`:
 
 ```ts
 import { useSyncExternalStore } from 'react';
@@ -1617,7 +1617,7 @@ Replace `invoice.client` reads with `invoice.clientName`.
 - [ ] **Step 1: Find usages**
 
 ```bash
-grep -n "invoice.client\|inv.client" /Users/botchtech/Desktop/payly/src/screens/DashboardScreen.tsx
+grep -n "invoice.client\|inv.client" /Users/botchtech/Desktop/pawl/src/screens/DashboardScreen.tsx
 ```
 
 Note each line number.
@@ -1708,7 +1708,7 @@ Replace `invoice.client` reads, change client lookup to `clientId`, make CRUD ca
 - [ ] **Step 1: Read the current file**
 
 ```bash
-cat /Users/botchtech/Desktop/payly/src/screens/InvoiceDetailScreen.tsx
+cat /Users/botchtech/Desktop/pawl/src/screens/InvoiceDetailScreen.tsx
 ```
 
 Identify:
@@ -1768,7 +1768,7 @@ Client picker writes `clientId` + `clientName` + `clientEmail` snapshot. Currenc
 - [ ] **Step 1: Read the current file**
 
 ```bash
-cat /Users/botchtech/Desktop/payly/src/screens/NewInvoiceScreen.tsx
+cat /Users/botchtech/Desktop/pawl/src/screens/NewInvoiceScreen.tsx
 ```
 
 Identify the parts to change:
@@ -1870,7 +1870,7 @@ Make `addClient` / `updateClient` async with error handling.
 - [ ] **Step 1: Find mutation calls**
 
 ```bash
-grep -n "addClient\|updateClient" /Users/botchtech/Desktop/payly/src/screens/ClientFormScreen.tsx
+grep -n "addClient\|updateClient" /Users/botchtech/Desktop/pawl/src/screens/ClientFormScreen.tsx
 ```
 
 - [ ] **Step 2: Convert to async**
@@ -1923,7 +1923,7 @@ Filter invoices by `clientId`. Make `deleteClient` async.
 - [ ] **Step 1: Find filter and delete usage**
 
 ```bash
-grep -n "client.name\|inv.client\|deleteClient\|invoice.client" /Users/botchtech/Desktop/payly/src/screens/ClientDetailScreen.tsx
+grep -n "client.name\|inv.client\|deleteClient\|invoice.client" /Users/botchtech/Desktop/pawl/src/screens/ClientDetailScreen.tsx
 ```
 
 - [ ] **Step 2: Update filter**
@@ -1969,7 +1969,7 @@ ReportsScreen uses `invoice.client` for any breakdown — fix. SettingsScreen ge
 - [ ] **Step 1: Update ReportsScreen**
 
 ```bash
-grep -n "invoice.client\|inv.client" /Users/botchtech/Desktop/payly/src/screens/ReportsScreen.tsx
+grep -n "invoice.client\|inv.client" /Users/botchtech/Desktop/pawl/src/screens/ReportsScreen.tsx
 ```
 
 Replace each match: `invoice.client` → `invoice.clientName`. If the breakdown groups by client, switch to grouping by `clientId` (with `clientName` as display label).
@@ -1977,7 +1977,7 @@ Replace each match: `invoice.client` → `invoice.clientName`. If the breakdown 
 - [ ] **Step 2: Update SettingsScreen — read current file**
 
 ```bash
-cat /Users/botchtech/Desktop/payly/src/screens/SettingsScreen.tsx
+cat /Users/botchtech/Desktop/pawl/src/screens/SettingsScreen.tsx
 ```
 
 - [ ] **Step 3: Add sign-out row**
@@ -2065,7 +2065,7 @@ Expected: PASS for the whole project. This is the first full-clean checkpoint si
 If there are remaining errors, they're almost certainly more `invoice.client` reads we missed. Run:
 
 ```bash
-grep -rn "invoice\.client\b\|inv\.client\b" /Users/botchtech/Desktop/payly/src/
+grep -rn "invoice\.client\b\|inv\.client\b" /Users/botchtech/Desktop/pawl/src/
 ```
 
 Fix any matches that aren't already `invoice.clientName`.
@@ -2113,7 +2113,7 @@ Open `src/i18n/en.ts` and verify these keys exist (add any missing). The full se
 'auth.continueWithGoogle': 'Continue with Google',
 'auth.continueWithApple': 'Continue with Apple',
 'auth.signOut': 'Sign out',
-'auth.signOutConfirm': 'Sign out of Payly?',
+'auth.signOutConfirm': 'Sign out of PAWL?',
 'auth.resetEmailSent': 'Password reset email sent',
 'auth.error.invalidCredential': 'Invalid email or password',
 'auth.error.emailInUse': 'Email already registered',
@@ -2143,7 +2143,7 @@ Open `src/i18n/es.ts` and add Spanish translations for every key above:
 'auth.continueWithGoogle': 'Continuar con Google',
 'auth.continueWithApple': 'Continuar con Apple',
 'auth.signOut': 'Cerrar sesión',
-'auth.signOutConfirm': '¿Cerrar sesión en Payly?',
+'auth.signOutConfirm': '¿Cerrar sesión en PAWL?',
 'auth.resetEmailSent': 'Se envió el correo de restablecimiento',
 'auth.error.invalidCredential': 'Correo o contraseña no válidos',
 'auth.error.emailInUse': 'Correo ya registrado',
@@ -2332,7 +2332,7 @@ Lock down Firestore. Verify the full success criteria from the spec.
 
 - [ ] **Step 1: Create the rules file**
 
-Create `/Users/botchtech/Desktop/payly/firestore.rules`:
+Create `/Users/botchtech/Desktop/pawl/firestore.rules`:
 
 ```
 rules_version = '2';
@@ -2354,14 +2354,14 @@ service cloud.firestore {
 If using Firebase MCP:
 ```
 Tool: mcp__plugin_firebase_firebase__firebase_deploy
-Args: { project: "payly-prod-xxxx", only: "firestore:rules" }
+Args: { project: "pawl-prod-xxxx", only: "firestore:rules" }
 ```
 
 Otherwise via CLI:
 ```bash
 npm install -g firebase-tools  # if not already
 firebase login
-firebase use payly-prod-xxxx
+firebase use pawl-prod-xxxx
 firebase deploy --only firestore:rules
 ```
 

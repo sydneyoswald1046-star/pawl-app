@@ -7,7 +7,7 @@ import { planForPrice } from './subscriptionConfig';
 /**
  * Platform-level Stripe webhook. Handles:
  *   - Invoice payments (legacy from when payment links lived on platform)
- *   - Payly Pro subscriptions: customer.subscription.{created,updated,deleted},
+ *   - PAWL Pro subscriptions: customer.subscription.{created,updated,deleted},
  *     invoice.paid, invoice.payment_failed
  *
  * Per-user Connect events (payments from connected accounts) are handled

@@ -145,7 +145,7 @@ export default function InvoiceDetailScreen() {
   };
 
   const ent = getEntitlements(profile);
-  const fromName = (ent.businessNameOnPdf && profile.businessName) || user?.displayName || user?.email || 'Payly';
+  const fromName = (ent.businessNameOnPdf && profile.businessName) || user?.displayName || user?.email || 'PAWL';
   const pdfOpts = {
     showPoweredBy: ent.poweredByFooter,
     logoUrl: ent.businessLogoOnPdf ? profile.businessLogoUrl : undefined,

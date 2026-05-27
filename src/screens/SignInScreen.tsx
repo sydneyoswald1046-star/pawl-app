@@ -75,7 +75,7 @@ export default function SignInScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={[styles.title, { color: c.text }]}>Payly</Text>
+          <Text style={[styles.title, { color: c.text }]}>PAWL</Text>
           <Text style={[styles.subtitle, { color: c.sub }]}>
             {mode === 'signIn' && t('auth.signIn')}
             {mode === 'signUp' && t('auth.signUp')}

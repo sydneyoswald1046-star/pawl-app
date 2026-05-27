@@ -15,7 +15,7 @@ const STRIPE_CONNECT_WEBHOOK_SECRET = defineSecret('STRIPE_CONNECT_WEBHOOK_SECRE
  *   account.updated         — promote stripeAccountStatus to 'active'
  *                             when charges_enabled flips on.
  *   checkout.session.completed
- *   payment_intent.succeeded — mark the matching Payly invoice paid.
+ *   payment_intent.succeeded — mark the matching PAWL invoice paid.
  */
 export const connectWebhook = onRequest(
   {
@@ -108,7 +108,7 @@ async function markInvoicePaid(metadata: Record<string, string> | null | undefin
   const uid = metadata?.payly_uid;
   const invoiceId = metadata?.payly_invoice_id;
   if (!uid || !invoiceId) {
-    logger.warn('Connect webhook missing payly metadata', { metadata });
+    logger.warn('Connect webhook missing pawl metadata', { metadata });
     return;
   }
   await admin.firestore().doc(`users/${uid}/invoices/${invoiceId}`).update({

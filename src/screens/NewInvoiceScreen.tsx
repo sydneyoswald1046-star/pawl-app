@@ -151,7 +151,7 @@ export default function NewInvoiceScreen() {
         dueDate,
       });
 
-      const fromName = (ent.businessNameOnPdf && profile.businessName) || user?.displayName || user?.email || 'Payly';
+      const fromName = (ent.businessNameOnPdf && profile.businessName) || user?.displayName || user?.email || 'PAWL';
       const pdfOpts = {
         showPoweredBy: ent.poweredByFooter,
         logoUrl: ent.businessLogoOnPdf ? profile.businessLogoUrl : undefined,

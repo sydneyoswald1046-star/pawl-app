@@ -1,8 +1,8 @@
 import type { ExpoConfig } from 'expo/config';
 
 const config: ExpoConfig = {
-  name: 'Payly',
-  slug: 'payly',
+  name: 'PAWL',
+  slug: 'pawl',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -14,30 +14,33 @@ const config: ExpoConfig = {
     backgroundColor: '#ffffff',
   },
   ios: {
-    bundleIdentifier: 'app.payly.botchtech',
+    bundleIdentifier: 'app.pawl.botchtech',
     supportsTablet: true,
     usesAppleSignIn: true,
     infoPlist: {
       // Stripe Terminal SDK + Tap to Pay on iPhone requirements.
       NSLocationWhenInUseUsageDescription:
-        'Payly uses location to comply with card-network rules when accepting in-person card payments.',
+        'PAWL uses location to comply with card-network rules when accepting in-person card payments.',
       NSBluetoothAlwaysUsageDescription:
-        'Payly connects to Bluetooth card readers (Stripe Reader M2, BBPOS, etc.) to accept in-person payments.',
+        'PAWL connects to Bluetooth card readers (Stripe Reader M2, BBPOS, etc.) to accept in-person payments.',
       NSBluetoothPeripheralUsageDescription:
-        'Payly connects to Bluetooth card readers to accept in-person payments.',
+        'PAWL connects to Bluetooth card readers to accept in-person payments.',
       NSMicrophoneUsageDescription:
-        'Payly uses the microphone for legacy audio-jack card readers.',
+        'PAWL uses the microphone for legacy audio-jack card readers.',
       UIBackgroundModes: ['bluetooth-central'],
     },
-    entitlements: {
-      // Tap to Pay on iPhone — request via Apple Developer Portal, attach to
-      // app's provisioning profile. App fails to launch on TTP API call until
-      // entitlement is approved (~1-3 business days from Apple).
-      'com.apple.developer.proximity-reader.payment.acceptance': true,
-    },
+    // Tap to Pay on iPhone entitlement is REQUESTED separately from Apple
+    // (developer.apple.com/contact/request/tap-to-pay-on-iphone/). Once Apple
+    // approves and attaches it to your provisioning profile, uncomment the
+    // block below and re-run `npx expo prebuild --clean`. External Bluetooth
+    // reader payments work without this entitlement.
+    //
+    // entitlements: {
+    //   'com.apple.developer.proximity-reader.payment.acceptance': true,
+    // },
   },
   android: {
-    package: 'app.payly.botchtech',
+    package: 'app.pawl.botchtech',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff',

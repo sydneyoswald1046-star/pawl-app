@@ -1,5 +1,5 @@
 /**
- * Stripe Price IDs for Payly Pro on the platform Stripe account.
+ * Stripe Price IDs for PAWL Pro on the platform Stripe account.
  *
  * Replace these test IDs with live IDs when switching to production.
  * To rotate prices without redeploying, move these into Firestore config

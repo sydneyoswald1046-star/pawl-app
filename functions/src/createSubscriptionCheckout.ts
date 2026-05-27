@@ -10,7 +10,7 @@ const SUCCESS_URL = 'https://us-central1-payly-app-prod.cloudfunctions.net/strip
 const CANCEL_URL = 'https://us-central1-payly-app-prod.cloudfunctions.net/stripeConnectReturn/refresh';
 
 /**
- * Creates a Stripe Checkout Session for a Payly Pro subscription.
+ * Creates a Stripe Checkout Session for a PAWL Pro subscription.
  * Lives on the platform Stripe account (NOT a connected account).
  * The session uses subscription mode with a 7-day free trial.
  *

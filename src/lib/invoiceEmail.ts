@@ -120,7 +120,7 @@ export function buildInvoiceHtml(invoice: Invoice, fromName: string, options: Pd
   ${invoice.notes ? `<div class="notes"><div class="label" style="margin-bottom:6px;">Notes</div>${escapeHtml(invoice.notes)}</div>` : ''}
 
   ${options.showPoweredBy
-    ? `<div style="margin-top:40px;text-align:center;color:#999;font-size:11px;">Sent via Payly</div>`
+    ? `<div style="margin-top:40px;text-align:center;color:#999;font-size:11px;">Sent via PAWL</div>`
     : ''}
 </body>
 </html>`;
