@@ -17,6 +17,24 @@ const config: ExpoConfig = {
     bundleIdentifier: 'app.payly.botchtech',
     supportsTablet: true,
     usesAppleSignIn: true,
+    infoPlist: {
+      // Stripe Terminal SDK + Tap to Pay on iPhone requirements.
+      NSLocationWhenInUseUsageDescription:
+        'Payly uses location to comply with card-network rules when accepting in-person card payments.',
+      NSBluetoothAlwaysUsageDescription:
+        'Payly connects to Bluetooth card readers (Stripe Reader M2, BBPOS, etc.) to accept in-person payments.',
+      NSBluetoothPeripheralUsageDescription:
+        'Payly connects to Bluetooth card readers to accept in-person payments.',
+      NSMicrophoneUsageDescription:
+        'Payly uses the microphone for legacy audio-jack card readers.',
+      UIBackgroundModes: ['bluetooth-central'],
+    },
+    entitlements: {
+      // Tap to Pay on iPhone — request via Apple Developer Portal, attach to
+      // app's provisioning profile. App fails to launch on TTP API call until
+      // entitlement is approved (~1-3 business days from Apple).
+      'com.apple.developer.proximity-reader.payment.acceptance': true,
+    },
   },
   android: {
     package: 'app.payly.botchtech',

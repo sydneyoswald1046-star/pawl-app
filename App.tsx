@@ -7,6 +7,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Home, FileText, Users, Settings, Plus } from 'lucide-react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { StripeTerminalProvider } from '@stripe/stripe-terminal-react-native';
+import { fetchConnectionToken } from './src/lib/terminal';
 import { ThemeProvider, useTheme } from './src/theme';
 import { I18nProvider, useT } from './src/i18n';
 import { AuthProvider, useAuth } from './src/lib/auth';
@@ -34,6 +36,7 @@ import ReportsScreen from './src/screens/ReportsScreen';
 import InvoiceDetailScreen from './src/screens/InvoiceDetailScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SplashScreen from './src/screens/SplashScreen';
+import BuyReaderScreen from './src/screens/BuyReaderScreen';
 import TabBarBackground, { TAB_BAR_HEIGHT } from './src/components/TabBarBackground';
 
 const Tab = createBottomTabNavigator();
@@ -153,6 +156,7 @@ function AppStack() {
       <Stack.Screen name="ClientForm" component={ClientFormScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Reports" component={ReportsScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
+      <Stack.Screen name="BuyReader" component={BuyReaderScreen} options={{ presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }
@@ -171,7 +175,12 @@ export default function App() {
       <I18nProvider>
         <ThemeProvider>
           <AuthProvider>
-            <AppInner />
+            <StripeTerminalProvider
+              logLevel={__DEV__ ? 'verbose' : 'error'}
+              tokenProvider={fetchConnectionToken}
+            >
+              <AppInner />
+            </StripeTerminalProvider>
           </AuthProvider>
         </ThemeProvider>
       </I18nProvider>

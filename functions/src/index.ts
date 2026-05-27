@@ -12,3 +12,7 @@ export { connectWebhook } from './connectWebhook';
 export { deleteAccount } from './deleteAccount';
 export { createSubscriptionCheckout } from './createSubscriptionCheckout';
 export { createBillingPortalSession } from './createBillingPortalSession';
+export {
+  createConnectionToken,
+  createTerminalPaymentIntent,
+} from './terminal';

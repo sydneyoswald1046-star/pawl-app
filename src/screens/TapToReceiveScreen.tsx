@@ -1,37 +1,219 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { X, Wifi, CheckCircle2, Bluetooth, Smartphone, ArrowRight, Link2 } from 'lucide-react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import {
+  X,
+  Wifi,
+  CheckCircle2,
+  Bluetooth,
+  Smartphone,
+  ShoppingCart,
+} from 'lucide-react-native';
+import { useStripeTerminal, Reader } from '@stripe/stripe-terminal-react-native';
 import { useTheme } from '../theme';
-import { detectNfcCapability, NfcCapability } from '../lib/nfcCapability';
 import { useT } from '../i18n';
+import { detectNfcCapability, NfcCapability } from '../lib/nfcCapability';
+import { createTerminalPaymentIntent } from '../lib/terminal';
 
-type Reader = { id: string; name: string; signal: number };
+type RouteParams = {
+  invoiceId?: string;
+  amount?: number;
+  currency?: string;
+};
 
-const MOCK_READERS: Reader[] = [
-  { id: 'stripe-m2', name: 'Stripe Reader M2', signal: 0.85 },
-  { id: 'bbpos-wp3', name: 'BBPOS WisePad 3', signal: 0.6 },
-  { id: 'square', name: 'Square Reader', signal: 0.4 },
-];
-
-const MOCK_AMOUNT = 850;
+type Phase =
+  | 'idle'
+  | 'initializing'
+  | 'discovering'
+  | 'connecting'
+  | 'ready'
+  | 'creating-intent'
+  | 'awaiting-tap'
+  | 'confirming'
+  | 'success'
+  | 'error';
 
 export default function TapToReceiveScreen() {
   const { c } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<any>();
-  const t = useT();
-  const [capability, setCapability] = useState<NfcCapability>(() => detectNfcCapability());
+  const route = useRoute<RouteProp<Record<string, RouteParams>, string>>();
+  const params = (route.params ?? {}) as RouteParams;
+
+  const initialCapability = useMemo(() => detectNfcCapability(), []);
+  const [capability, setCapability] = useState<NfcCapability>(initialCapability);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [discoveredReaders, setDiscoveredReaders] = useState<Reader.Type[]>([]);
+  const [activeReader, setActiveReader] = useState<Reader.Type | null>(null);
+
+  const {
+    initialize,
+    discoverReaders,
+    cancelDiscovering,
+    connectReader,
+    disconnectReader,
+    retrievePaymentIntent,
+    collectPaymentMethod,
+    confirmPaymentIntent,
+    cancelCollectPaymentMethod,
+    connectedReader,
+  } = useStripeTerminal({
+    onUpdateDiscoveredReaders: (readers) => {
+      setDiscoveredReaders(readers);
+    },
+  });
+
+  // Initialize the SDK once when the screen mounts. The SDK is idempotent —
+  // re-initializing on a remount is safe.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setPhase('initializing');
+      try {
+        const { error } = await initialize();
+        if (cancelled) return;
+        if (error) {
+          setPhase('error');
+          setErrorMsg(error.message);
+          return;
+        }
+        setPhase('idle');
+      } catch (e) {
+        if (!cancelled) {
+          setPhase('error');
+          setErrorMsg((e as Error).message);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+      cancelDiscovering();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const startBuiltInFlow = useCallback(async () => {
+    if (!params.invoiceId || !params.amount) {
+      Alert.alert('Tap to Pay', 'Open this from an invoice to charge.');
+      return;
+    }
+    setPhase('discovering');
+    setErrorMsg('');
+    try {
+      const { error } = await discoverReaders({
+        discoveryMethod: 'tapToPay',
+        simulated: __DEV__,
+      });
+      if (error) throw new Error(error.message);
+    } catch (e) {
+      setPhase('error');
+      setErrorMsg((e as Error).message);
+    }
+  }, [discoverReaders, params.amount, params.invoiceId]);
+
+  const startExternalFlow = useCallback(async () => {
+    if (!params.invoiceId || !params.amount) {
+      Alert.alert('Tap to Pay', 'Open this from an invoice to charge.');
+      return;
+    }
+    setPhase('discovering');
+    setErrorMsg('');
+    try {
+      const { error } = await discoverReaders({
+        discoveryMethod: 'bluetoothScan',
+        simulated: __DEV__,
+      });
+      if (error) throw new Error(error.message);
+    } catch (e) {
+      setPhase('error');
+      setErrorMsg((e as Error).message);
+    }
+  }, [discoverReaders, params.amount, params.invoiceId]);
+
+  const pickReader = useCallback(
+    async (reader: Reader.Type) => {
+      setPhase('connecting');
+      setActiveReader(reader);
+      try {
+        const locationId = reader.locationId ?? '';
+        const { error } = await connectReader(
+          capability === 'builtin'
+            ? { discoveryMethod: 'tapToPay', reader, locationId }
+            : { discoveryMethod: 'bluetoothScan', reader, locationId },
+        );
+        if (error) throw new Error(error.message);
+        setPhase('ready');
+        // Auto-progress to payment intent creation.
+        await charge();
+      } catch (e) {
+        setPhase('error');
+        setErrorMsg((e as Error).message);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [capability, connectReader],
+  );
+
+  const charge = useCallback(async () => {
+    if (!params.invoiceId || !params.amount) return;
+    setPhase('creating-intent');
+    try {
+      const { clientSecret } = await createTerminalPaymentIntent({
+        invoiceId: params.invoiceId,
+        amount: params.amount,
+        currency: params.currency,
+      });
+      const { paymentIntent: retrieved, error: retrieveErr } =
+        await retrievePaymentIntent(clientSecret);
+      if (retrieveErr || !retrieved) {
+        throw new Error(retrieveErr?.message ?? 'Failed to retrieve intent');
+      }
+      setPhase('awaiting-tap');
+      const { paymentIntent: collected, error: collectErr } =
+        await collectPaymentMethod({ paymentIntent: retrieved });
+      if (collectErr || !collected) {
+        throw new Error(collectErr?.message ?? 'Failed to collect payment');
+      }
+      setPhase('confirming');
+      const { error: confirmErr } = await confirmPaymentIntent({
+        paymentIntent: collected,
+      });
+      if (confirmErr) throw new Error(confirmErr.message);
+      setPhase('success');
+    } catch (e) {
+      setPhase('error');
+      setErrorMsg((e as Error).message);
+    }
+  }, [
+    params.amount,
+    params.currency,
+    params.invoiceId,
+    retrievePaymentIntent,
+    collectPaymentMethod,
+    confirmPaymentIntent,
+  ]);
+
+  const reset = useCallback(async () => {
+    await cancelCollectPaymentMethod();
+    if (connectedReader) await disconnectReader();
+    setActiveReader(null);
+    setDiscoveredReaders([]);
+    setErrorMsg('');
+    setPhase('idle');
+  }, [cancelCollectPaymentMethod, connectedReader, disconnectReader]);
+
+  const amountLabel = formatAmount(params.amount, params.currency);
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg, paddingTop: insets.top + 8 }]}>
@@ -53,389 +235,378 @@ export default function TapToReceiveScreen() {
         </TouchableOpacity>
       </View>
 
-      {capability === 'builtin' && <BuiltInFlow />}
-      {capability === 'external' && <ExternalFlow />}
-      {capability === 'unsupported' && (
-        <UnsupportedView onUseExternal={() => setCapability('external')} />
+      {params.invoiceId && (
+        <View style={[styles.amountBar, { backgroundColor: c.elevated }]}>
+          <Text style={[styles.amountLabel, { color: c.sub }]}>Charging</Text>
+          <Text style={[styles.amountValue, { color: c.text }]}>{amountLabel}</Text>
+        </View>
+      )}
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.body}>
+        {phase === 'error' && (
+          <ErrorCard
+            message={errorMsg}
+            onRetry={capability === 'builtin' ? startBuiltInFlow : startExternalFlow}
+            onReset={reset}
+            c={c}
+          />
+        )}
+
+        {phase !== 'error' && capability === 'builtin' && (
+          <BuiltInFlow
+            phase={phase}
+            amountLabel={amountLabel}
+            onStart={startBuiltInFlow}
+            onReset={reset}
+            discoveredReaders={discoveredReaders}
+            onPickReader={pickReader}
+            c={c}
+          />
+        )}
+
+        {phase !== 'error' && capability === 'external' && (
+          <ExternalFlow
+            phase={phase}
+            amountLabel={amountLabel}
+            activeReader={activeReader}
+            discoveredReaders={discoveredReaders}
+            onStart={startExternalFlow}
+            onPickReader={pickReader}
+            onReset={reset}
+            onBuyReader={() => nav.navigate('BuyReader')}
+            c={c}
+          />
+        )}
+
+        {phase !== 'error' && capability === 'unsupported' && (
+          <UnsupportedCard
+            onBuyReader={() => nav.navigate('BuyReader')}
+            onUseExternal={() => setCapability('external')}
+            c={c}
+          />
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Built-in flow ──────────────────────────────────────────────
+
+function BuiltInFlow(props: {
+  phase: Phase;
+  amountLabel: string;
+  onStart: () => void;
+  onReset: () => void;
+  discoveredReaders: Reader.Type[];
+  onPickReader: (reader: Reader.Type) => void;
+  c: any;
+}) {
+  const { phase, onStart, onReset, discoveredReaders, onPickReader, c } = props;
+
+  // Built-in TTP usually surfaces one "Local Mobile" reader instantly. Pick
+  // it automatically as soon as it appears so the user only sees one tap.
+  useEffect(() => {
+    if (phase === 'discovering' && discoveredReaders.length > 0) {
+      onPickReader(discoveredReaders[0]);
+    }
+  }, [phase, discoveredReaders, onPickReader]);
+
+  return (
+    <View style={styles.flowContent}>
+      <View style={[styles.iconBubble, { backgroundColor: phaseColor(phase, c) }]}>
+        {phase === 'success' ? (
+          <CheckCircle2 size={48} color="#fff" strokeWidth={2.3} />
+        ) : (
+          <Smartphone size={48} color="#fff" strokeWidth={2.3} />
+        )}
+      </View>
+
+      <Text style={[styles.phaseTitle, { color: c.text }]}>{phaseTitle(phase)}</Text>
+      <Text style={[styles.phaseBody, { color: c.sub }]}>{phaseBody(phase)}</Text>
+
+      {phase === 'idle' && (
+        <PrimaryBtn
+          label="Start Tap to Pay"
+          color={c.accent}
+          onPress={onStart}
+          icon={<Wifi size={18} color="#fff" strokeWidth={2.3} style={{ transform: [{ rotate: '-45deg' }] }} />}
+        />
+      )}
+      {phase === 'awaiting-tap' && (
+        <SecondaryBtn label="Cancel" color={c.sub} onPress={onReset} />
+      )}
+      {phase === 'success' && (
+        <PrimaryBtn label="Done" color={c.green} onPress={onReset} icon={<CheckCircle2 size={18} color="#fff" />} />
+      )}
+      {(phase === 'discovering' ||
+        phase === 'connecting' ||
+        phase === 'creating-intent' ||
+        phase === 'confirming') && (
+        <ActivityIndicator color={c.accent} style={{ marginTop: 16 }} />
       )}
     </View>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Built-in Tap to Pay flow (iPhone XS+, iOS 16.4+)
-// ─────────────────────────────────────────────────────────────
-type BuiltInPhase = 'idle' | 'scanning' | 'success';
+// ─── External reader flow ──────────────────────────────────────
 
-function BuiltInFlow() {
-  const { c } = useTheme();
-  const t = useT();
-  const [phase, setPhase] = useState<BuiltInPhase>('idle');
+function ExternalFlow(props: {
+  phase: Phase;
+  amountLabel: string;
+  activeReader: Reader.Type | null;
+  discoveredReaders: Reader.Type[];
+  onStart: () => void;
+  onPickReader: (reader: Reader.Type) => void;
+  onReset: () => void;
+  onBuyReader: () => void;
+  c: any;
+}) {
+  const { phase, discoveredReaders, onStart, onPickReader, onReset, onBuyReader, c } =
+    props;
 
-  const start = () => {
-    setPhase('scanning');
-    // TODO: hand off to Stripe Terminal / payment SDK here
-    setTimeout(() => setPhase('success'), 3000);
-  };
-
-  const reset = () => setPhase('idle');
-
-  return (
-    <View style={styles.flowContent}>
-      <ScanVisual
-        color={phase === 'success' ? c.green : c.accent}
-        active={phase === 'scanning'}
-        success={phase === 'success'}
-      />
-
-      <View style={styles.flowCopy}>
-        {phase === 'idle' && (
-          <>
-            <Text style={[styles.flowTitle, { color: c.text }]}>{t('tap.ready_title')}</Text>
-            <Text style={[styles.flowBody, { color: c.sub }]}>{t('tap.ready_body')}</Text>
-          </>
-        )}
-        {phase === 'scanning' && (
-          <>
-            <Text style={[styles.flowTitle, { color: c.text }]}>{t('tap.scanning_title')}</Text>
-            <Text style={[styles.flowBody, { color: c.sub }]}>{t('tap.scanning_body')}</Text>
-          </>
-        )}
-        {phase === 'success' && (
-          <>
-            <Text style={[styles.flowTitle, { color: c.green }]}>
-              {t('tap.success_title', { amount: `$${MOCK_AMOUNT.toLocaleString()}` })}
-            </Text>
-            <Text style={[styles.flowBody, { color: c.sub }]}>{t('tap.success_body')}</Text>
-          </>
-        )}
-      </View>
-
-      <View style={styles.actionRow}>
-        {phase === 'idle' && (
-          <PrimaryButton label={t('common.start')} onPress={start} color={c.accent} icon={<Wifi size={18} color="#fff" strokeWidth={2.3} style={{ transform: [{ rotate: '-45deg' }] }} />} />
-        )}
-        {phase === 'scanning' && (
-          <SecondaryButton label={t('common.cancel')} onPress={reset} color={c.sub} />
-        )}
-        {phase === 'success' && (
-          <PrimaryButton label={t('common.done')} onPress={reset} color={c.green} icon={<CheckCircle2 size={18} color="#fff" strokeWidth={2.3} />} />
-        )}
-      </View>
-    </View>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// External reader flow (older iPhones, Android, iPads)
-// ─────────────────────────────────────────────────────────────
-type ExternalPhase =
-  | { kind: 'list' }
-  | { kind: 'connecting'; reader: Reader }
-  | { kind: 'ready'; reader: Reader }
-  | { kind: 'scanning'; reader: Reader }
-  | { kind: 'success'; reader: Reader };
-
-function ExternalFlow() {
-  const { c } = useTheme();
-  const t = useT();
-  const [phase, setPhase] = useState<ExternalPhase>({ kind: 'list' });
-
-  const connect = (reader: Reader) => {
-    setPhase({ kind: 'connecting', reader });
-    // TODO: Stripe Terminal discoverReaders → connectReader
-    setTimeout(() => setPhase({ kind: 'ready', reader }), 1800);
-  };
-
-  const startCharge = (reader: Reader) => {
-    setPhase({ kind: 'scanning', reader });
-    // TODO: Stripe Terminal collectPaymentMethod → processPayment
-    setTimeout(() => setPhase({ kind: 'success', reader }), 2500);
-  };
-
-  if (phase.kind === 'list') {
+  if (phase === 'idle') {
     return (
       <View style={styles.flowContent}>
-        <View style={styles.readerIconWrap}>
-          <LinearGradient
-            colors={[c.accent + '22', c.accent + '08']}
-            style={styles.readerIconCircle}
-          >
-            <Bluetooth size={34} color={c.accent} strokeWidth={2} />
-          </LinearGradient>
+        <View style={[styles.iconBubble, { backgroundColor: c.accent }]}>
+          <Bluetooth size={48} color="#fff" strokeWidth={2.3} />
         </View>
-        <View style={styles.flowCopy}>
-          <Text style={[styles.flowTitle, { color: c.text }]}>{t('tap.nearby_title')}</Text>
-          <Text style={[styles.flowBody, { color: c.sub }]}>{t('tap.nearby_body')}</Text>
-        </View>
-        <View style={[styles.readerList, { backgroundColor: c.surface }]}>
-          {MOCK_READERS.map((r, i) => (
-            <TouchableOpacity
-              key={r.id}
-              style={[styles.readerRow, i < MOCK_READERS.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: c.muted + '40' }]}
-              onPress={() => connect(r)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.readerIconSmall, { backgroundColor: c.accent + '18' }]}>
-                <Bluetooth size={16} color={c.accent} strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.readerName, { color: c.text }]}>{r.name}</Text>
-                <Text style={[styles.readerSignal, { color: c.sub }]}>
-                  {t('tap.signal', { pct: Math.round(r.signal * 100) })}
-                </Text>
-              </View>
-              <ArrowRight size={16} color={c.faint} />
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    );
-  }
-
-  if (phase.kind === 'connecting') {
-    return (
-      <View style={styles.flowContent}>
-        <View style={styles.readerIconWrap}>
-          <View style={[styles.readerIconCircle, { backgroundColor: c.elevated }]}>
-            <ActivityIndicator size="large" color={c.accent} />
-          </View>
-        </View>
-        <View style={styles.flowCopy}>
-          <Text style={[styles.flowTitle, { color: c.text }]}>{t('tap.pairing_title')}</Text>
-          <Text style={[styles.flowBody, { color: c.sub }]}>
-            {t('tap.pairing_body', { name: phase.reader.name })}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  // ready / scanning / success share the ScanVisual
-  return (
-    <View style={styles.flowContent}>
-      <ScanVisual
-        color={phase.kind === 'success' ? c.green : c.accent}
-        active={phase.kind === 'scanning'}
-        success={phase.kind === 'success'}
-      />
-      <View style={styles.connectedPill}>
-        <View style={[styles.dot, { backgroundColor: c.green }]} />
-        <Text style={[styles.connectedText, { color: c.sub }]}>
-          {t('tap.paired_pill', { name: phase.reader.name })}
+        <Text style={[styles.phaseTitle, { color: c.text }]}>Pair a reader</Text>
+        <Text style={[styles.phaseBody, { color: c.sub }]}>
+          Power on your Stripe Reader (M2, S700, or BBPOS) and keep it within 3 feet.
         </Text>
+        <PrimaryBtn label="Scan for readers" color={c.accent} onPress={onStart} icon={<Bluetooth size={18} color="#fff" />} />
+        <TouchableOpacity onPress={onBuyReader} style={styles.linkBtn}>
+          <ShoppingCart size={14} color={c.accent} />
+          <Text style={[styles.linkText, { color: c.accent }]}>I don't have a reader yet</Text>
+        </TouchableOpacity>
       </View>
-      <View style={styles.flowCopy}>
-        {phase.kind === 'ready' && (
-          <>
-            <Text style={[styles.flowTitle, { color: c.text }]}>{t('tap.ext_ready_title')}</Text>
-            <Text style={[styles.flowBody, { color: c.sub }]}>{t('tap.ext_ready_body')}</Text>
-          </>
-        )}
-        {phase.kind === 'scanning' && (
-          <>
-            <Text style={[styles.flowTitle, { color: c.text }]}>{t('tap.ext_scanning_title')}</Text>
-            <Text style={[styles.flowBody, { color: c.sub }]}>{t('tap.ext_scanning_body')}</Text>
-          </>
-        )}
-        {phase.kind === 'success' && (
-          <>
-            <Text style={[styles.flowTitle, { color: c.green }]}>
-              {t('tap.success_title', { amount: `$${MOCK_AMOUNT.toLocaleString()}` })}
-            </Text>
-            <Text style={[styles.flowBody, { color: c.sub }]}>{t('tap.success_body')}</Text>
-          </>
-        )}
-      </View>
-      <View style={styles.actionRow}>
-        {phase.kind === 'ready' && (
-          <PrimaryButton label={t('common.start')} color={c.accent} onPress={() => startCharge(phase.reader)} icon={<Wifi size={18} color="#fff" strokeWidth={2.3} style={{ transform: [{ rotate: '-45deg' }] }} />} />
-        )}
-        {phase.kind === 'scanning' && (
-          <SecondaryButton label={t('common.cancel')} onPress={() => setPhase({ kind: 'ready', reader: phase.reader })} color={c.sub} />
-        )}
-        {phase.kind === 'success' && (
-          <PrimaryButton label={t('common.done')} color={c.green} onPress={() => setPhase({ kind: 'ready', reader: phase.reader })} icon={<CheckCircle2 size={18} color="#fff" strokeWidth={2.3} />} />
-        )}
-      </View>
-    </View>
-  );
-}
+    );
+  }
 
-// ─────────────────────────────────────────────────────────────
-// Unsupported device view
-// ─────────────────────────────────────────────────────────────
-function UnsupportedView({ onUseExternal }: { onUseExternal: () => void }) {
-  const { c } = useTheme();
-  const t = useT();
+  if (phase === 'discovering') {
+    return (
+      <View style={styles.flowContent}>
+        <ActivityIndicator color={c.accent} size="large" />
+        <Text style={[styles.phaseTitle, { color: c.text, marginTop: 16 }]}>Searching…</Text>
+        <Text style={[styles.phaseBody, { color: c.sub }]}>
+          Make sure your reader is powered on and not paired to another device.
+        </Text>
+        {discoveredReaders.length > 0 && (
+          <View style={styles.readerList}>
+            {discoveredReaders.map((r) => (
+              <TouchableOpacity
+                key={r.serialNumber ?? r.id}
+                style={[styles.readerRow, { backgroundColor: c.elevated }]}
+                onPress={() => onPickReader(r)}
+              >
+                <Bluetooth size={18} color={c.accent} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.readerName, { color: c.text }]}>
+                    {r.deviceType ?? 'Reader'}
+                  </Text>
+                  <Text style={[styles.readerSub, { color: c.sub }]}>
+                    {r.serialNumber ?? r.id}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        <SecondaryBtn label="Cancel" color={c.sub} onPress={onReset} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.flowContent}>
-      <View style={styles.readerIconWrap}>
-        <View style={[styles.readerIconCircle, { backgroundColor: c.elevated }]}>
-          <Smartphone size={34} color={c.sub} strokeWidth={1.8} />
-        </View>
-      </View>
-      <View style={styles.flowCopy}>
-        <Text style={[styles.flowTitle, { color: c.text }]}>{t('tap.unsupported_title')}</Text>
-        <Text style={[styles.flowBody, { color: c.sub }]}>{t('tap.unsupported_body')}</Text>
-      </View>
-      <View style={styles.actionRow}>
-        <PrimaryButton
-          label={t('tap.pair_reader')}
-          onPress={onUseExternal}
-          color={c.accent}
-          icon={<Link2 size={18} color="#fff" strokeWidth={2.3} />}
-        />
-      </View>
-    </View>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// Shared visuals
-// ─────────────────────────────────────────────────────────────
-function ScanVisual({ color, active, success }: { color: string; active: boolean; success: boolean }) {
-  const pulse = useSharedValue(0);
-  const successScale = useSharedValue(1);
-
-  useEffect(() => {
-    if (active) {
-      pulse.value = withRepeat(
-        withTiming(1, { duration: 1600, easing: Easing.out(Easing.ease) }),
-        -1,
-        false
-      );
-    } else {
-      pulse.value = 0;
-    }
-  }, [active, pulse]);
-
-  useEffect(() => {
-    if (success) {
-      successScale.value = withSequence(
-        withTiming(1.15, { duration: 240, easing: Easing.out(Easing.back(2)) }),
-        withTiming(1, { duration: 180 })
-      );
-    }
-  }, [success, successScale]);
-
-  const ring1 = useAnimatedStyle(() => ({
-    opacity: active ? Math.max(0, 0.35 - pulse.value * 0.35) : 0,
-    transform: [{ scale: active ? 1 + pulse.value * 0.9 : 1 }],
-  }));
-  const ring2 = useAnimatedStyle(() => {
-    const p = (pulse.value + 0.33) % 1;
-    return {
-      opacity: active ? Math.max(0, 0.3 - p * 0.3) : 0,
-      transform: [{ scale: active ? 1 + p * 0.9 : 1 }],
-    };
-  });
-  const ring3 = useAnimatedStyle(() => {
-    const p = (pulse.value + 0.66) % 1;
-    return {
-      opacity: active ? Math.max(0, 0.25 - p * 0.25) : 0,
-      transform: [{ scale: active ? 1 + p * 0.9 : 1 }],
-    };
-  });
-  const coreStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: successScale.value }],
-  }));
-
-  return (
-    <View style={styles.scanVisual}>
-      <Animated.View style={[styles.ring, { borderColor: color }, ring1]} />
-      <Animated.View style={[styles.ring, { borderColor: color }, ring2]} />
-      <Animated.View style={[styles.ring, { borderColor: color }, ring3]} />
-      <Animated.View style={[styles.coreCircle, { backgroundColor: color + '18', borderColor: color + '55' }, coreStyle]}>
-        {success ? (
-          <CheckCircle2 size={52} color={color} strokeWidth={2.2} />
+      <View style={[styles.iconBubble, { backgroundColor: phaseColor(phase, c) }]}>
+        {phase === 'success' ? (
+          <CheckCircle2 size={48} color="#fff" strokeWidth={2.3} />
         ) : (
-          <Wifi size={52} color={color} strokeWidth={2} style={{ transform: [{ rotate: '-45deg' }] }} />
+          <Bluetooth size={48} color="#fff" strokeWidth={2.3} />
         )}
-      </Animated.View>
+      </View>
+      <Text style={[styles.phaseTitle, { color: c.text }]}>{phaseTitle(phase)}</Text>
+      <Text style={[styles.phaseBody, { color: c.sub }]}>{phaseBody(phase)}</Text>
+      {phase === 'success' ? (
+        <PrimaryBtn label="Done" color={c.green} onPress={onReset} icon={<CheckCircle2 size={18} color="#fff" />} />
+      ) : (
+        <ActivityIndicator color={c.accent} style={{ marginTop: 16 }} />
+      )}
     </View>
   );
 }
 
-function PrimaryButton({ label, onPress, color, icon }: { label: string; onPress: () => void; color: string; icon?: React.ReactNode }) {
+// ─── Unsupported device ────────────────────────────────────────
+
+function UnsupportedCard(props: {
+  onBuyReader: () => void;
+  onUseExternal: () => void;
+  c: any;
+}) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.primaryBtnWrap}>
-      <LinearGradient
-        colors={[color, shade(color, -0.2)]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.primaryBtn, { shadowColor: color }]}
-      >
-        {icon}
-        <Text style={styles.primaryBtnText}>{label}</Text>
-      </LinearGradient>
+    <View style={styles.flowContent}>
+      <View style={[styles.iconBubble, { backgroundColor: props.c.amber }]}>
+        <Smartphone size={48} color="#fff" strokeWidth={2.3} />
+      </View>
+      <Text style={[styles.phaseTitle, { color: props.c.text }]}>
+        Your phone can't tap-to-pay
+      </Text>
+      <Text style={[styles.phaseBody, { color: props.c.sub }]}>
+        Tap to Pay on iPhone needs iPhone XS or newer on iOS 16.4+. Pair a Bluetooth reader instead — they start at $59.
+      </Text>
+      <PrimaryBtn
+        label="Buy a reader"
+        color={props.c.accent}
+        onPress={props.onBuyReader}
+        icon={<ShoppingCart size={18} color="#fff" />}
+      />
+      <SecondaryBtn
+        label="I already have one"
+        color={props.c.accent}
+        onPress={props.onUseExternal}
+      />
+    </View>
+  );
+}
+
+// ─── Error / common bits ───────────────────────────────────────
+
+function ErrorCard(props: {
+  message: string;
+  onRetry: () => void;
+  onReset: () => void;
+  c: any;
+}) {
+  return (
+    <View style={styles.flowContent}>
+      <View style={[styles.iconBubble, { backgroundColor: props.c.red }]}>
+        <X size={48} color="#fff" strokeWidth={2.3} />
+      </View>
+      <Text style={[styles.phaseTitle, { color: props.c.text }]}>Something went wrong</Text>
+      <Text style={[styles.phaseBody, { color: props.c.sub }]}>{props.message || 'Try again.'}</Text>
+      <PrimaryBtn label="Try again" color={props.c.accent} onPress={props.onRetry} />
+      <SecondaryBtn label="Close" color={props.c.sub} onPress={props.onReset} />
+    </View>
+  );
+}
+
+function PrimaryBtn(props: {
+  label: string;
+  color: string;
+  onPress: () => void;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.primaryBtn, { backgroundColor: props.color }]}
+      onPress={props.onPress}
+    >
+      {props.icon}
+      <Text style={styles.primaryBtnText}>{props.label}</Text>
     </TouchableOpacity>
   );
 }
 
-function SecondaryButton({ label, onPress, color }: { label: string; onPress: () => void; color: string }) {
+function SecondaryBtn(props: { label: string; color: string; onPress: () => void }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[styles.secondaryBtn]}>
-      <Text style={[styles.secondaryBtnText, { color }]}>{label}</Text>
+    <TouchableOpacity style={styles.secondaryBtn} onPress={props.onPress}>
+      <Text style={[styles.secondaryBtnText, { color: props.color }]}>{props.label}</Text>
     </TouchableOpacity>
   );
 }
 
-function shade(hex: string, amount: number): string {
-  // naive: if hex, darken/lighten by amount (-1..1)
-  const m = hex.match(/^#([0-9a-f]{6})$/i);
-  if (!m) return hex;
-  const num = parseInt(m[1], 16);
-  const r = clamp(Math.round(((num >> 16) & 0xff) * (1 + amount)));
-  const g = clamp(Math.round(((num >> 8) & 0xff) * (1 + amount)));
-  const b = clamp(Math.round((num & 0xff) * (1 + amount)));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+function phaseTitle(phase: Phase): string {
+  switch (phase) {
+    case 'idle': return 'Ready to tap';
+    case 'initializing': return 'Initializing…';
+    case 'discovering': return 'Searching…';
+    case 'connecting': return 'Connecting…';
+    case 'ready': return 'Reader connected';
+    case 'creating-intent': return 'Preparing…';
+    case 'awaiting-tap': return 'Hold card near phone';
+    case 'confirming': return 'Confirming payment…';
+    case 'success': return 'Paid';
+    case 'error': return 'Something went wrong';
+  }
 }
-function clamp(n: number) { return Math.max(0, Math.min(255, n)); }
+
+function phaseBody(phase: Phase): string {
+  switch (phase) {
+    case 'idle': return 'Press the button below and present your customer\'s card.';
+    case 'initializing': return 'Connecting to Stripe Terminal…';
+    case 'discovering': return 'Looking for a reader.';
+    case 'connecting': return 'Pairing with the reader.';
+    case 'ready': return 'Reader is ready.';
+    case 'creating-intent': return 'Preparing the charge.';
+    case 'awaiting-tap': return 'Have the customer tap their card, phone, or watch.';
+    case 'confirming': return 'Talking to the bank.';
+    case 'success': return 'The invoice is marked paid.';
+    case 'error': return '';
+  }
+}
+
+function phaseColor(phase: Phase, c: any): string {
+  if (phase === 'success') return c.green;
+  if (phase === 'error') return c.red;
+  return c.accent;
+}
+
+function formatAmount(amount?: number, currency?: string): string {
+  if (!amount) return '—';
+  const cur = (currency || 'USD').toUpperCase();
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format(amount);
+  } catch {
+    return `${cur} ${amount.toFixed(2)}`;
+  }
+}
 
 const styles = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: 20 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 28 },
-  title: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
-  subtitle: { fontSize: 13, marginTop: 4 },
-  closeBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-
-  flowContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 40 },
-  flowCopy: { alignItems: 'center', marginTop: 32, marginBottom: 28, paddingHorizontal: 20 },
-  flowTitle: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4, marginBottom: 8, textAlign: 'center' },
-  flowBody: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
-  actionRow: { width: '100%', alignItems: 'center' },
-
-  scanVisual: { width: 220, height: 220, alignItems: 'center', justifyContent: 'center' },
-  ring: { position: 'absolute', width: 220, height: 220, borderRadius: 110, borderWidth: 1.5 },
-  coreCircle: { width: 140, height: 140, borderRadius: 70, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-
-  primaryBtnWrap: { width: '100%' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingBottom: 16 },
+  title: { fontSize: 26, fontWeight: '700' },
+  subtitle: { fontSize: 14, marginTop: 4 },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  amountBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  amountLabel: { fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  amountValue: { fontSize: 22, fontWeight: '700' },
+  body: { paddingBottom: 40 },
+  flowContent: { alignItems: 'center', paddingVertical: 24, gap: 10 },
+  iconBubble: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  phaseTitle: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
+  phaseBody: { fontSize: 15, textAlign: 'center', lineHeight: 21, paddingHorizontal: 16 },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 16,
-    borderRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 6,
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 20,
+    minWidth: 200,
   },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
-  secondaryBtn: { paddingVertical: 14 },
-  secondaryBtnText: { fontSize: 15, fontWeight: '600' },
-
-  readerIconWrap: { marginBottom: 8 },
-  readerIconCircle: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
-  readerList: { borderRadius: 16, width: '100%', overflow: 'hidden', marginTop: 4 },
-  readerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  readerIconSmall: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  secondaryBtn: { padding: 12 },
+  secondaryBtnText: { fontSize: 15, fontWeight: '500' },
+  linkBtn: { flexDirection: 'row', gap: 6, alignItems: 'center', marginTop: 10 },
+  linkText: { fontSize: 14, fontWeight: '500' },
+  readerList: { width: '100%', gap: 8, marginVertical: 16 },
+  readerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+  },
   readerName: { fontSize: 15, fontWeight: '600' },
-  readerSignal: { fontSize: 12, marginTop: 2 },
-
-  connectedPill: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  connectedText: { fontSize: 12, fontWeight: '500' },
+  readerSub: { fontSize: 12, marginTop: 2 },
 });

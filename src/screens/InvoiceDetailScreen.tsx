@@ -301,6 +301,30 @@ export default function InvoiceDetailScreen() {
             <ExternalLink size={18} color="#fff" strokeWidth={2.2} />
           </TouchableOpacity>
         )}
+
+        {/* Tap to receive — in-person card payment via Stripe Terminal */}
+        {!paid && invoice.paymentLinkSource !== 'custom' && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() =>
+              nav.navigate('TapToReceive', {
+                invoiceId: invoice.id,
+                amount: invoice.amount,
+                currency: invoice.currency,
+              })
+            }
+            style={[styles.payLinkCard, { backgroundColor: c.surface, borderWidth: 1, borderColor: c.accent }]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.payLinkTitle, { color: c.accent }]}>
+                Tap to receive in person
+              </Text>
+              <Text style={[styles.payLinkSub, { color: c.sub }]} numberOfLines={1}>
+                Charge a card via Tap to Pay on iPhone or a paired reader
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
         {!paid && !invoice.paymentLinkUrl && !invoice.paymentLinkError && (
           <View style={[styles.payLinkCard, { backgroundColor: c.surface, borderWidth: 1, borderColor: c.faint + '40', borderStyle: 'dashed' }]}>
             <Text style={[styles.payLinkSub, { color: c.sub }]}>
