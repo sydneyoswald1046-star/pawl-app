@@ -34,7 +34,6 @@ import ReportsScreen from './src/screens/ReportsScreen';
 import InvoiceDetailScreen from './src/screens/InvoiceDetailScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SplashScreen from './src/screens/SplashScreen';
-import PaystackConnectScreen from './src/screens/PaystackConnectScreen';
 import TabBarBackground, { TAB_BAR_HEIGHT } from './src/components/TabBarBackground';
 
 const Tab = createBottomTabNavigator();
@@ -154,7 +153,6 @@ function AppStack() {
       <Stack.Screen name="ClientForm" component={ClientFormScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Reports" component={ReportsScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
-      <Stack.Screen name="PaystackConnect" component={PaystackConnectScreen} options={{ presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }
