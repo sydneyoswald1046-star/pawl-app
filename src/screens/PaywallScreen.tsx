@@ -8,6 +8,7 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -64,6 +65,15 @@ export default function PaywallScreen() {
       cancelled = true;
     };
   }, []);
+
+  const selectedPkg = packages[plan];
+  const introPrice = selectedPkg?.product?.introPrice;
+  const hasFreeTrial = introPrice?.price === 0;
+  const trialDays = hasFreeTrial && introPrice?.periodUnit === 'DAY'
+    ? introPrice.periodNumberOfUnits
+    : hasFreeTrial && introPrice?.periodUnit === 'WEEK'
+      ? introPrice.periodNumberOfUnits * 7
+      : null;
 
   const onSubscribe = async () => {
     if (busy) return;
@@ -166,7 +176,9 @@ export default function PaywallScreen() {
             priceLabel={packages.yearly?.product.priceString ?? '—'}
             periodLabel={t('paywall.per_year')}
             ribbon={t('paywall.best_value')}
-            sub={t('paywall.save_33')}
+            sub={packages.yearly?.product?.introPrice?.price === 0
+              ? `Free trial · then ${t('paywall.save_33').toLowerCase()}`
+              : t('paywall.save_33')}
             c={c}
           />
           <PlanCard
@@ -174,7 +186,9 @@ export default function PaywallScreen() {
             onPress={() => setPlan('monthly')}
             priceLabel={packages.monthly?.product.priceString ?? '—'}
             periodLabel={t('paywall.per_month')}
-            sub={t('paywall.flex_cancel')}
+            sub={packages.monthly?.product?.introPrice?.price === 0
+              ? `Free trial · ${t('paywall.flex_cancel').toLowerCase()}`
+              : t('paywall.flex_cancel')}
             c={c}
           />
         </View>
@@ -200,12 +214,22 @@ export default function PaywallScreen() {
             {busy ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.ctaText}>{t('paywall.cta_start_trial')}</Text>
+              <Text style={styles.ctaText}>
+                {hasFreeTrial
+                  ? `Start ${trialDays ? `${trialDays}-day` : ''} free trial`
+                  : t('paywall.cta_upgrade')}
+              </Text>
             )}
           </LinearGradient>
         </TouchableOpacity>
 
-        <Text style={[styles.fine, { color: c.faint }]}>{t('paywall.trial_disclaimer')}</Text>
+        <Text style={[styles.fine, { color: c.faint }]}>
+          {hasFreeTrial && selectedPkg
+            ? `${trialDays ? `${trialDays} days` : 'Trial'} free. Then ${selectedPkg.product.priceString}/${plan === 'yearly' ? 'year' : 'month'}. Cancel anytime from Settings.`
+            : selectedPkg
+              ? `${selectedPkg.product.priceString}/${plan === 'yearly' ? 'year' : 'month'}. Cancel anytime from Settings.`
+              : t('paywall.trial_disclaimer')}
+        </Text>
 
         <TouchableOpacity onPress={() => nav.goBack()} style={{ marginTop: 18 }}>
           <Text style={[styles.continueFree, { color: c.sub }]}>{t('paywall.continue_free')}</Text>
@@ -216,6 +240,23 @@ export default function PaywallScreen() {
             {restoring ? 'Restoring…' : 'Restore purchases'}
           </Text>
         </TouchableOpacity>
+
+        <Text style={[styles.legalCopy, { color: c.faint }]}>
+          PAWL Pro is an auto-renewing subscription. Payment is charged to your Apple
+          account at confirmation. The subscription renews automatically at the same
+          price unless cancelled at least 24 hours before the end of the current period.
+          Manage or cancel anytime in iOS Settings → your name → Subscriptions.
+        </Text>
+
+        <View style={styles.legalLinks}>
+          <Pressable onPress={() => Linking.openURL('https://sydneyoswald1046-star.github.io/pawl-site/terms.html')}>
+            <Text style={[styles.legalLink, { color: c.accent }]}>Terms of Use (EULA)</Text>
+          </Pressable>
+          <Text style={[styles.legalDot, { color: c.faint }]}>·</Text>
+          <Pressable onPress={() => Linking.openURL('https://sydneyoswald1046-star.github.io/pawl-site/privacy.html')}>
+            <Text style={[styles.legalLink, { color: c.accent }]}>Privacy Policy</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );
@@ -320,4 +361,8 @@ const styles = StyleSheet.create({
   ctaText: { fontSize: 16, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
   fine: { fontSize: 11, textAlign: 'center', marginTop: 12, lineHeight: 16 },
   continueFree: { fontSize: 14, textAlign: 'center', fontWeight: '600' },
+  legalCopy: { fontSize: 11, textAlign: 'center', marginTop: 22, lineHeight: 16 },
+  legalLinks: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10, gap: 6 },
+  legalLink: { fontSize: 12, fontWeight: '600', textDecorationLine: 'underline' },
+  legalDot: { fontSize: 12, fontWeight: '600' },
 });
