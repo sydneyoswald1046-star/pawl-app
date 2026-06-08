@@ -18,6 +18,9 @@ const config: ExpoConfig = {
     supportsTablet: true,
     usesAppleSignIn: true,
     infoPlist: {
+      // PAWL only uses standard HTTPS/TLS — exempt from export compliance.
+      // Declaring this skips the per-build encryption question in App Store Connect.
+      ITSAppUsesNonExemptEncryption: false,
       // Stripe Terminal SDK + Tap to Pay on iPhone requirements.
       NSLocationWhenInUseUsageDescription:
         'PAWL uses location to comply with card-network rules when accepting in-person card payments.',
@@ -27,7 +30,6 @@ const config: ExpoConfig = {
         'PAWL connects to Bluetooth card readers to accept in-person payments.',
       NSMicrophoneUsageDescription:
         'PAWL uses the microphone for legacy audio-jack card readers.',
-      UIBackgroundModes: ['bluetooth-central'],
     },
     // Tap to Pay on iPhone entitlement is REQUESTED separately from Apple
     // (developer.apple.com/contact/request/tap-to-pay-on-iphone/). Once Apple

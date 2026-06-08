@@ -132,16 +132,50 @@ export default function InvoiceDetailScreen() {
     }
   };
 
+  const sendViaSMS = async (kind: 'initial' | 'reminder') => {
+    const phone = clientRecord?.phone?.trim();
+    if (!phone) {
+      Alert.alert(t('common.error'), 'No phone number on file for this client.');
+      return;
+    }
+    const numStr = invoice.number ? `${invoice.number} ` : '';
+    const amountStr = `$${invoice.amount.toLocaleString()}`;
+    const lead =
+      kind === 'reminder'
+        ? `Friendly reminder for invoice ${numStr}from ${fromName} — ${amountStr}.`
+        : `Here's invoice ${numStr}from ${fromName} — ${amountStr}.`;
+    const body = invoice.paymentLinkUrl
+      ? `${lead}\nPay here: ${invoice.paymentLinkUrl}`
+      : lead;
+    // iOS uses `&body=` (not `?body=`) after the number in the sms: scheme.
+    const url = `sms:${phone}&body=${encodeURIComponent(body)}`;
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        Alert.alert(t('common.error'), 'Messages is not available on this device.');
+        return;
+      }
+      await Linking.openURL(url);
+    } catch (err) {
+      Alert.alert(t('common.error'), (err as Error).message);
+    }
+  };
+
   const sendReminder = () => {
-    if (!invoice.clientEmail) {
+    const hasEmail = !!invoice.clientEmail;
+    const hasPhone = !!clientRecord?.phone;
+    if (!hasEmail && !hasPhone) {
       Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
       return;
     }
-    Alert.alert(t('invoice.reminder_choose_title'), t('invoice.reminder_choose_body'), [
-      { text: t('invoice.email_choose_mail'), onPress: sendReminderViaMail },
-      { text: t('invoice.email_choose_share'), onPress: shareReminderToOtherApp },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]);
+    const buttons: Array<{ text: string; onPress?: () => void; style?: 'cancel' | 'destructive' }> = [];
+    if (hasEmail) {
+      buttons.push({ text: t('invoice.email_choose_mail'), onPress: sendReminderViaMail });
+      buttons.push({ text: t('invoice.email_choose_share'), onPress: shareReminderToOtherApp });
+    }
+    if (hasPhone) buttons.push({ text: 'Send via Messages', onPress: () => sendViaSMS('reminder') });
+    buttons.push({ text: t('common.cancel'), style: 'cancel' });
+    Alert.alert(t('invoice.reminder_choose_title'), t('invoice.reminder_choose_body'), buttons);
   };
 
   const ent = getEntitlements(profile);
@@ -178,11 +212,20 @@ export default function InvoiceDetailScreen() {
   };
 
   const emailToClient = () => {
-    Alert.alert(t('invoice.email_choose_title'), t('invoice.email_choose_body'), [
-      { text: t('invoice.email_choose_mail'), onPress: sendViaMail },
-      { text: t('invoice.email_choose_share'), onPress: shareToOtherApp },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]);
+    const hasEmail = !!invoice.clientEmail;
+    const hasPhone = !!clientRecord?.phone;
+    const buttons: Array<{ text: string; onPress?: () => void; style?: 'cancel' | 'destructive' }> = [];
+    if (hasEmail) {
+      buttons.push({ text: t('invoice.email_choose_mail'), onPress: sendViaMail });
+      buttons.push({ text: t('invoice.email_choose_share'), onPress: shareToOtherApp });
+    }
+    if (hasPhone) buttons.push({ text: 'Send via Messages', onPress: () => sendViaSMS('initial') });
+    if (!hasEmail && !hasPhone) {
+      Alert.alert(t('common.error'), t('invoice.email_no_recipient'));
+      return;
+    }
+    buttons.push({ text: t('common.cancel'), style: 'cancel' });
+    Alert.alert(t('invoice.email_choose_title'), t('invoice.email_choose_body'), buttons);
   };
 
   const confirmDelete = () => {

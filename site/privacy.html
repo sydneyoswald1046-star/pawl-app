@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PAWL — Privacy Policy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index, follow">
+<style>
+  :root {
+    --bg: #fff;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --accent: #6d28d9;
+    --line: #e5e7eb;
+    --code-bg: #f3f4f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0a0a;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --accent: #a78bfa;
+      --line: #1f2937;
+      --code-bg: #111827;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 64px 24px 96px;
+  }
+  header { margin-bottom: 32px; }
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.5px;
+  }
+  .updated { color: var(--muted); font-size: 14px; }
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 40px 0 12px;
+    letter-spacing: -0.3px;
+  }
+  h3 { font-size: 16px; font-weight: 600; margin: 24px 0 8px; }
+  p, li { font-size: 15px; }
+  ul { padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th { font-weight: 600; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>PAWL — Privacy Policy</h1>
+  <div class="updated">Last updated: 2026-05-27</div>
+</header>
+
+<p>PAWL is an invoicing tool for solo operators and small businesses. This policy describes what data the app handles and what it does not.</p>
+
+<h2>Summary</h2>
+<p>PAWL stores the data you create — invoices, clients, business settings — in your private Firebase project tied to your account. It does not sell, share, or monetize personal information. Payment processing is delegated to Stripe and Apple, both of whom maintain their own published privacy policies.</p>
+
+<h2>Data PAWL collects</h2>
+<table>
+<thead><tr><th>Category</th><th>What it is</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td><strong>Account</strong></td><td>Email address from the sign-in provider you choose (Apple, Google, or email/password)</td><td>Required to authenticate you across devices</td></tr>
+<tr><td><strong>Profile</strong></td><td>Business name, optional logo, default currency, notification preferences</td><td>Stored in your private Firestore document and used inside the app</td></tr>
+<tr><td><strong>Invoices and clients</strong></td><td>Invoice numbers, line items, amounts, due dates, client names, client emails, optional notes</td><td>Required to render invoices and PDFs</td></tr>
+<tr><td><strong>Payment connections</strong></td><td>Stripe Connect account ID (if you connect Stripe)</td><td>Used to route invoice payments to your own Stripe balance</td></tr>
+<tr><td><strong>Subscription state</strong></td><td>Whether your PAWL Pro subscription is active, the plan, the renewal date</td><td>Sourced from RevenueCat (which sources from Apple). Used to unlock Pro features</td></tr>
+</tbody>
+</table>
+
+<p>PAWL <strong>does not</strong> read your contacts, location, photo library, microphone, calendar, or any other system data unless you explicitly opt in to a feature that needs it (for example, attaching a business logo).</p>
+
+<h2>Data PAWL does not collect</h2>
+<ul>
+  <li>No analytics or behavioral tracking SDKs</li>
+  <li>No advertising IDs and no advertising</li>
+  <li>No location data</li>
+  <li>No biometrics</li>
+  <li>No data shared with third-party marketers</li>
+</ul>
+
+<h2>Third parties</h2>
+<p>PAWL relies on a small set of named processors. Each has a published privacy policy:</p>
+<ul>
+  <li><strong>Firebase (Google Cloud)</strong> — hosts your account, profile, invoices, and clients. <a href="https://firebase.google.com/support/privacy">firebase.google.com/support/privacy</a></li>
+  <li><strong>Stripe</strong> — processes invoice payments, Connect account onboarding, and (where applicable) in-person card payments via Stripe Terminal. <a href="https://stripe.com/privacy">stripe.com/privacy</a></li>
+  <li><strong>RevenueCat</strong> — manages PAWL Pro subscription state across reinstalls and platforms. <a href="https://www.revenuecat.com/privacy/">revenuecat.com/privacy</a></li>
+  <li><strong>Apple StoreKit</strong> — handles the in-app purchase itself when you subscribe to PAWL Pro on iPhone. <a href="https://www.apple.com/legal/privacy/">apple.com/legal/privacy</a></li>
+</ul>
+<p>PAWL does not sell data to any of these providers — they are subprocessors operating under contracts that limit them to providing the service.</p>
+
+<h2>In-person card payments</h2>
+<p>If you use <strong>Tap to Receive</strong> to charge a customer in person, the card data is read by Apple's Tap to Pay on iPhone or your paired Stripe Reader and sent directly to Stripe for processing. PAWL only sees the metadata Stripe returns (last 4 digits of the card, success/failure, transaction ID) and stores none of the customer's card details.</p>
+
+<h2>Notifications</h2>
+<p>If you opt in to invoice notifications, PAWL stores an Apple push token in your Firestore profile so the backend can send "invoice paid", "invoice overdue", and reminder notifications. You can revoke this at any time in iOS Settings → Notifications → PAWL.</p>
+
+<h2>Your rights</h2>
+<ul>
+  <li><strong>Access</strong>: every piece of data PAWL has about you is visible inside the app.</li>
+  <li><strong>Export</strong>: contact us at <a href="mailto:hello@pawl.app">hello@pawl.app</a> to request a JSON export.</li>
+  <li><strong>Deletion</strong>: Settings → Privacy → Delete Account permanently removes your Firebase user, your profile document, every invoice, every client, every uploaded asset, and your RevenueCat customer record within 30 days. The deletion is irreversible.</li>
+  <li><strong>Subscription cancellation</strong>: PAWL Pro subscriptions are managed by Apple. Open the iOS Settings app → tap your name → Subscriptions → PAWL to cancel.</li>
+</ul>
+
+<h2>Children</h2>
+<p>PAWL is not designed for users under 13 and does not knowingly collect data from children. The App Store rating is 4+ based on content only.</p>
+
+<h2>Changes</h2>
+<p>If this policy ever changes, the new policy will be posted at this URL with a revised "Last updated" date and a summary of what changed. Continued use after a change indicates acceptance.</p>
+
+<h2>Contact</h2>
+<p>Questions about this policy or your data: <a href="mailto:hello@pawl.app">hello@pawl.app</a></p>
+
+<footer>
+  <p style="margin:0 0 10px"><a href="index.html">Support</a> &nbsp;·&nbsp; <a href="privacy.html">Privacy Policy</a> &nbsp;·&nbsp; <a href="terms.html">Terms of Service</a></p>
+  © 2026 PAWL. All rights reserved.
+</footer>
+</main>
+</body>
+</html>

@@ -25,8 +25,9 @@ export function getEntitlements(profile: UserProfile | null | undefined): Entitl
     status: status ?? 'free',
     invoiceLimit: isPro ? 'unlimited' : FREE_INVOICE_LIMIT_PER_MONTH,
     clientLimit: isPro ? 'unlimited' : FREE_CLIENT_LIMIT,
-    stripeConnect: isPro,
-    customPaymentLink: isPro,
+    // Receiving payments is core functionality — free for all users.
+    stripeConnect: true,
+    customPaymentLink: true,
     businessNameOnPdf: isPro,
     businessLogoOnPdf: isPro,
     poweredByFooter: !isPro, // free PDFs include a "Sent via PAWL" footer

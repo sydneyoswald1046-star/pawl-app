@@ -61,8 +61,9 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       await auth.signInWithApple();
-    } catch (err) {
-      Alert.alert((err as Error).message);
+    } catch (err: any) {
+      if (err?.code === 'ERR_REQUEST_CANCELED' || err?.code === 'ERR_CANCELED') return;
+      Alert.alert(t('common.error'), err?.message ?? String(err));
     } finally {
       setLoading(false);
     }

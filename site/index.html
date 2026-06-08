@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PAWL — Help &amp; Support</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Help, FAQs, and contact for PAWL — the invoicing app for freelancers and small businesses.">
+<meta name="robots" content="index, follow">
+<style>
+  :root {
+    --bg: #fff;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --accent: #6d28d9;
+    --line: #e5e7eb;
+    --card: #f9fafb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0a0a;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --accent: #a78bfa;
+      --line: #1f2937;
+      --card: #111827;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 64px 24px 96px;
+  }
+  header { margin-bottom: 32px; }
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.5px;
+  }
+  .lede { color: var(--muted); font-size: 16px; margin: 0; }
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 44px 0 8px;
+    letter-spacing: -0.3px;
+  }
+  p, li { font-size: 15px; }
+  ul { padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  details {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0 16px;
+    margin: 10px 0;
+    background: var(--card);
+  }
+  details[open] { padding-bottom: 8px; }
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 14px 0;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after {
+    content: "+";
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 20px;
+    margin-left: 12px;
+  }
+  details[open] summary::after { content: "\2212"; }
+  details p:first-of-type { margin-top: 0; }
+  .contact-card {
+    margin-top: 16px;
+    padding: 20px 24px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+  }
+  .contact-card p { margin: 6px 0; }
+  .pill {
+    display: inline-block;
+    font-size: 13px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 10px;
+    margin-right: 6px;
+  }
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  footer a { color: var(--muted); }
+  nav.toc { margin: 8px 0 0; }
+  nav.toc a { margin-right: 14px; font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>PAWL — Help &amp; Support</h1>
+  <p class="lede">PAWL is an invoicing app for freelancers and small businesses: create a clean invoice, share a secure payment link, and get paid. This page answers the most common questions. If you don't find your answer, email us — a real person replies.</p>
+  <nav class="toc">
+    <a href="#getting-started">Getting started</a>
+    <a href="#payments">Payments</a>
+    <a href="#pro">PAWL Pro</a>
+    <a href="#data">Your data</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</header>
+
+<h2 id="getting-started">Getting started</h2>
+
+<details>
+  <summary>How do I create my first invoice?</summary>
+  <p>Tap the <strong>+</strong> button in the center of the tab bar, pick a client (or add a new one), add one or more line items with a description and amount, choose a due date (Net 7, 14, or 30), and tap <strong>Save invoice</strong>. PAWL builds a clean, numbered invoice you can share immediately.</p>
+</details>
+
+<details>
+  <summary>How do I add a client?</summary>
+  <p>Open the <strong>Clients</strong> tab and tap <strong>Add client</strong>, or add one on the fly while creating an invoice. A name is all that's required; email and phone are optional but let you send the invoice and payment reminders.</p>
+</details>
+
+<details>
+  <summary>Can I bill in different currencies?</summary>
+  <p>Yes. PAWL supports multiple currencies including USD, EUR, GBP, and CAD. Set a default in Settings, and each invoice records its own currency.</p>
+</details>
+
+<details>
+  <summary>How are invoice numbers generated?</summary>
+  <p>PAWL automatically assigns the next sequential number (for example INV-0008 after INV-0007) so your numbering stays clean and consistent.</p>
+</details>
+
+<h2 id="payments">Getting paid</h2>
+
+<details>
+  <summary>How do my clients pay an invoice?</summary>
+  <p>Every invoice can carry a secure payment link. Your client opens it and pays by card, Apple Pay, or bank transfer. The money settles directly into your own connected account — PAWL never holds your funds.</p>
+</details>
+
+<details>
+  <summary>How do I connect my bank account / Stripe?</summary>
+  <p>PAWL uses <strong>Stripe Connect</strong>. In Settings, tap to connect Stripe and complete Stripe's short onboarding (business details and a payout bank account). Once connected, your invoice payment links route money straight to your Stripe balance, and Stripe pays out to your bank on its normal schedule.</p>
+</details>
+
+<details>
+  <summary>What is "Tap to Receive" (in-person payments)?</summary>
+  <p>Tap to Receive lets you take a card payment in person. On a supported iPhone (XS or newer, iOS 16.4+) you can use <strong>Tap to Pay on iPhone</strong> — the customer taps their card or phone directly to yours, no extra hardware. On other devices you can pair a supported Stripe card reader. Card data goes straight to Stripe; PAWL only sees the result (last 4 digits, success/failure, transaction ID).</p>
+</details>
+
+<details>
+  <summary>Do I need a card reader?</summary>
+  <p>Not for online payment links. For in-person payments, newer iPhones use Tap to Pay on iPhone with no hardware. Older iPhones, iPads, and Android devices need a paired Stripe reader (for example the Stripe Reader M2 or BBPOS Chipper). PAWL shows a "buy a reader" option with current hardware links when your device needs one.</p>
+</details>
+
+<details>
+  <summary>I sent an invoice but haven't been paid — what can I do?</summary>
+  <p>Check that the invoice has a payment link and that your Stripe account is fully connected (incomplete onboarding can block payouts). PAWL keeps overdue invoices front-and-center on your dashboard and can send automatic reminders before and after the due date.</p>
+</details>
+
+<details>
+  <summary>Are there automatic payment reminders?</summary>
+  <p>Yes. Reminder automation nudges clients before and after the due date so you don't have to chase late payments manually. This is part of PAWL Pro.</p>
+</details>
+
+<h2 id="pro">PAWL Pro &amp; billing</h2>
+
+<details>
+  <summary>What's included in PAWL Pro?</summary>
+  <p>PAWL Pro unlocks unlimited invoices and clients, your logo and business name on PDF invoices, reminder automation, removal of the "Sent via PAWL" footer, and priority support. The free plan lets you create invoices, add up to 10 clients, and send a limited number of invoices each month.</p>
+</details>
+
+<details>
+  <summary>How much does PAWL Pro cost?</summary>
+  <p>PAWL Pro is available monthly or yearly (the yearly plan is the better value). Exact prices are shown on the subscription screen in the app and may vary by region. New subscriptions start with a free trial.</p>
+</details>
+
+<details>
+  <summary>How do I cancel my subscription?</summary>
+  <p>PAWL Pro is billed through Apple. To cancel, open the iOS <strong>Settings</strong> app, tap your name, tap <strong>Subscriptions</strong>, choose <strong>PAWL</strong>, and cancel. You keep Pro features until the end of the current billing period.</p>
+</details>
+
+<details>
+  <summary>I subscribed but Pro features aren't unlocked.</summary>
+  <p>Make sure you're signed in to the same account you purchased on, then open the subscription screen and tap <strong>Restore purchases</strong>. If it still doesn't unlock within a few minutes, email us with the email address on your account and we'll sort it out.</p>
+</details>
+
+<h2 id="data">Your data &amp; account</h2>
+
+<details>
+  <summary>Where is my data stored?</summary>
+  <p>Your invoices, clients, and business settings live in your own private account, hosted on Google Firebase. PAWL does not sell, share, or monetize your data, and does not run analytics or ad tracking. See the <a href="privacy.html">Privacy Policy</a> for the full breakdown.</p>
+</details>
+
+<details>
+  <summary>How do I export my data?</summary>
+  <p>Email <a href="mailto:hello@pawl.app">hello@pawl.app</a> from your account address to request a JSON export of your invoices and clients.</p>
+</details>
+
+<details>
+  <summary>How do I delete my account?</summary>
+  <p>In the app, go to <strong>Settings → Privacy → Delete Account</strong>. This permanently removes your user, profile, every invoice and client, any uploaded assets, and your subscription customer record within 30 days. Deletion is irreversible.</p>
+</details>
+
+<details>
+  <summary>How do I sign in?</summary>
+  <p>You can sign in with Apple, Google, or an email and password. Your data syncs to whichever account you use, so sign in with the same method each time.</p>
+</details>
+
+<h2 id="contact">Still need help?</h2>
+<div class="contact-card">
+  <p><span class="pill">Email</span> <a href="mailto:hello@pawl.app">hello@pawl.app</a></p>
+  <p>Tell us what's happening and, if it helps, the email address on your account. A real person reads every message and usually replies within one business day.</p>
+</div>
+
+<footer>
+  <nav class="toc">
+    <a href="index.html">Support</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="terms.html">Terms of Service</a>
+  </nav>
+  <p>© 2026 PAWL. All rights reserved.</p>
+</footer>
+</main>
+</body>
+</html>

@@ -46,3 +46,6 @@ GoogleService-Info.plist
 
 # Firebase CLI cache
 .firebase/
+
+# App Store assets (large media, not code)
+AppStore/

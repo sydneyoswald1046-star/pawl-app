@@ -69,7 +69,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export const useTheme = () => useContext(ThemeContext);
 
 export function getTierColors(currentEarnings: number, previousEarnings: number, isDark: boolean) {
-  const diff = ((currentEarnings - previousEarnings) / previousEarnings) * 100;
+  // Guard divide-by-zero: with no prior-month earnings the percentage is
+  // undefined. Treat "0 → something" as +100% and "0 → 0" as flat 0%.
+  const diff =
+    previousEarnings > 0
+      ? ((currentEarnings - previousEarnings) / previousEarnings) * 100
+      : currentEarnings > 0
+        ? 100
+        : 0;
   const isUp = diff > 0;
   const isCritical = diff < -30;
   const tier = isUp ? 'gold' : isCritical ? 'red' : 'green';
